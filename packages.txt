@@ -1,0 +1,25 @@
+tidyverse: 2.0.0
+AMR: 3.0.1
+caret: 7.0.1
+data.table: 1.18.2.1
+corrplot: 0.95
+glue: 1.8.0
+rlang: 1.1.7
+ggrepel: 0.9.6
+pROC: 1.19.0.1
+PRROC: 1.4
+psych: 2.6.5
+irr: 0.84.1
+kappaSize: 1.2
+MIMER: 1.0.4
+
+transformers: 5.4.0
+captum: 0.8.0
+torch: 2.11.0
+datasets: 4.8.4
+pandas: 3.0.1
+numpy: 1.26.4
+sklearn: 1.8.0
+matplotlib: 3.10.8
+shap: 0.49.1
+scipy: 1.17.1
