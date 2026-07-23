@@ -1,5 +1,6 @@
 #Ignore all CSVs,images, and html
 *.csv
+!aware_classification.csv
 *.png
 *.jpg
 *.jpeg
