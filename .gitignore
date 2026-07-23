@@ -1,0 +1,10 @@
+#Ignore all CSVs,images, and html
+*.csv
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+*.pdf
+*.html
