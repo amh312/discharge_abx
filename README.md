@@ -22,7 +22,7 @@ This code was written and run using *R* version 4.3.2 and Python version 3.11.15
 
 This code will exactly reproduce the clinical prediction model results of the study and descriptive data. It will, however, not necessarily sample the same discharge letters that were used for the clinician review exercise. 
 
-Before running the code, the data should be saved into a secure local directory. The required package versions are included in the *packages.txt* file within this directory.
+Before running the code, the data should be saved into a secure local directory, along with the *aware_classification.csv* file that can be downloaded from this repository. The required package versions are included in the *packages.txt* file within this directory.
 
 To reproduce the analyses, scripts must be run in this order:  
 
