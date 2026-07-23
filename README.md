@@ -16,7 +16,7 @@ PhysioNet MIMIC-IV citations:
 
 *Goldberger, A., Amaral, L., Glass, L., Hausdorff, J., Ivanov, P. C., Mark, R., ... & Stanley, H. E. (2000). PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals. Circulation [Online]. 101 (23), pp. e215–e220.*
 
-This code was written and run using *R* version 4.3.2 and Python version 3.11.15 on a MacBook Pro running macOS Tahoe version 26.5.2 with an Apple M5 processor, 32GB random-access memory and 10 cores. The code may need to be run in chunks, depending on application memory. The typical run time of all code including sensitivity analyses was approximately 3 days.
+This code was written and run using *R* version 4.3.2 and Python version 3.11.15 on a MacBook Pro running macOS Tahoe version 26.5.2 with an Apple M5 processor, 32GB random-access memory and 10 cores. Metal Performance Shaders were used to run the code on the Apple M5 GPU—model scripts (those starting with *BERT* below will revert to CPU if MPS is unavailable, but if other GPUs are available this preference can be amended in the script). The typical run time of all code including sensitivity analyses was approximately 3 days.
 
 ***Reproducing the study***
 
