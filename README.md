@@ -16,7 +16,7 @@ PhysioNet MIMIC-IV citations:
 
 *Goldberger, A., Amaral, L., Glass, L., Hausdorff, J., Ivanov, P. C., Mark, R., ... & Stanley, H. E. (2000). PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals. Circulation [Online]. 101 (23), pp. e215–e220.*
 
-This code was written and run using *R* version 4.3.2 and Python version 3.11.15 on a MacBook Pro running macOS Tahoe version 26.5.2 with an Apple M5 processor, 32GB random-access memory and 10 cores. Metal Performance Shaders were used to run the code on the Apple M5 GPU—model scripts (those starting with *BERT* below will revert to CPU if MPS is unavailable, but if other GPUs are available this preference can be amended in the script). The typical run time of all code including sensitivity analyses was approximately 3 days.
+This code was written and run using *R* version 4.3.2 and Python version 3.11.15 on a MacBook Pro running macOS Tahoe version 26.5.2 with an Apple M5 processor, 32GB random-access memory and 10 cores. Total run time for all scripts was 23 hours, 22 minutes and 59.2 seconds. Metal Performance Shaders were used to run the code on the Apple M5 GPU—model scripts (those starting with *BERT* below will revert to CPU if MPS is unavailable, but if other GPUs are available this preference can be amended in the script).
 
 ***Reproducing the study***
 
@@ -33,11 +33,8 @@ To reproduce the analyses, scripts must be run in this order:
    5. **lang_performance.R**
    6. **lang_access_performance.R**
    7. **lang_descriptive.R**
-   8. **BERT_SHAP.py**  
-   9. **BERT_SHAP_Access.py**
-   10. **lang_SHAP.R**
-   11. **BERT_stability.py**
-   12. **BERT_timesens.py**
-   13. **lang_sensitivity.R**
+   8. **BERT_stability.py**
+   9. **BERT_timesens.py**
+   10. **lang_sensitivity.R**
    
-To run **lang_questionnaire.R**, questionnaires first need to be undertaken by six suitably qualified participants, each of whom must first have gone through the MIMIC-IV data access steps mandated by PhysioNet. We engineered a user-friendly version of the questionnaire using the Shiny app *app.R* for the overall model and *app_2.R* for the Access model, with manual editing of the specific csv file name required for each exercise in the format "q_1.csv", "q_2.csv", etc and "ac_q_1.csv", "ac_q_2.csv", etc. However, questions could also be provided as .csv files with the column headings "page" with values 2-26, "question" for the discharge letter text and "answer" with instructions for participants to input either "Yes" or "No" in this column.
+To then run **lang_questionnaire.R**, **BERT_SHAP.py**, **BERT_SHAP_Access.py** and **lang_SHAP.R**, questionnaires first need to be undertaken by six suitably qualified participants, each of whom must first have gone through the MIMIC-IV data access steps mandated by PhysioNet. We engineered a user-friendly version of the questionnaire using the Shiny app *app.R* for the overall model and *app_2.R* for the Access model, with manual editing of the specific csv file name required for each exercise in the format "q_1.csv", "q_2.csv", etc and "ac_q_1.csv", "ac_q_2.csv", etc. However, questions could also be provided as .csv files with the column headings "page" with values 2-26, "question" for the discharge letter text and "answer" with instructions for participants to input either "Yes" or "No" in this column.
