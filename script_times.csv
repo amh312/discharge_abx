@@ -1,0 +1,14 @@
+Script,Time (hms)
+Total,23h 22m 59.2s
+lang_disc_cleaning.R,0h 3m 37s
+BERT_discharges.py,8h 22m 36.8s
+BERT_access.py,3h 10m 27.3s
+lang_performance.R,0h 3m 7.1s
+lang_access_performance.R,0h 1m 0.9s
+lang_descriptive.R,0h 0m 27.1s
+BERT_stability.py,0h 34m 25.4s
+BERT_timesens.py,10h 41m 57.5s
+lang_questionnaire.R,0h 0m 1.7s
+BERT_SHAP.py,0h 13m 7.8s
+BERT_SHAP_Access.py,0h 12m 8.3s
+lang_SHAP.R,0h 0m 2.2s
