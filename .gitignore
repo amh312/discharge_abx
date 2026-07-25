@@ -1,6 +1,7 @@
 #Ignore all CSVs,images, qmd and html
 *.csv
 !aware_classification.csv
+!script_times.csv
 *.png
 *.jpg
 *.jpeg
