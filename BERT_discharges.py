@@ -256,10 +256,17 @@ time_df = pd.read_csv("script_times.csv")
 time_df = pd.concat([time_df, time_df1], ignore_index=True)
 time_df.to_csv("script_times.csv", index=False)
 
-###Check time taken to run a single prediction
+###Check time taken to run a single prediction on longest text in the test set
 discmodel = DistilBertForSequenceClassification.from_pretrained("./pt_disc_dbert", num_labels=2)
 discmodel.to(device)
-sample_row = test_disc_bertdf.shuffle(seed=123).select(range(1))
+sample_row = (
+    test_disc_bertdf
+    .map(lambda x: {"input_len": len(x["input_ids"])})
+    .sort("input_len", reverse=True)
+    .select(range(1))
+    .remove_columns("input_len")
+)
+sample_row.set_format(type="torch", columns=["input_ids", "attention_mask", "label"])
 test_loader = DataLoader(sample_row, batch_size=1)
 predict_start_time = datetime.now()
 test_model = bert_predict(discmodel)

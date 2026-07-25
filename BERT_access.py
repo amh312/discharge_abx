@@ -247,7 +247,14 @@ time_df.to_csv("script_times.csv", index=False)
 ###Check time taken to run a single prediction
 discmodel = DistilBertForSequenceClassification.from_pretrained("./pt_access_disc_dbert", num_labels=2)
 discmodel.to(device)
-sample_row = test_disc_bertdf.shuffle(seed=123).select(range(1))
+sample_row = (
+    test_disc_bertdf
+    .map(lambda x: {"input_len": len(x["input_ids"])})
+    .sort("input_len", reverse=True)
+    .select(range(1))
+    .remove_columns("input_len")
+)
+sample_row.set_format(type="torch", columns=["input_ids", "attention_mask", "label"])
 test_loader = DataLoader(sample_row, batch_size=1)
 predict_start_time = datetime.now()
 test_model = bert_predict(discmodel)
