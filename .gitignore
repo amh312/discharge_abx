@@ -1,4 +1,4 @@
-#Ignore all CSVs,images, and html
+#Ignore all CSVs,images, qmd and html
 *.csv
 !aware_classification.csv
 *.png
@@ -9,3 +9,4 @@
 *.svg
 *.pdf
 *.html
+*.qmd
