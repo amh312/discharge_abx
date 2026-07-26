@@ -1,5 +1,9 @@
 #MODEL PERFORMANCE (ACCESS PREDICTION)
 
+##Set seed
+
+set.seed(123)
+
 ##Script timer
 
 start_time <- Sys.time()
@@ -27,6 +31,15 @@ roc_maker <- function(actclass, predpr, outc, aurocnam) {
 
   #assign to global env
   assign(aurocnam, ur_auroc_value, envir = .GlobalEnv)
+
+  #write sourcedata to csv
+  roc_df <- data.frame(
+    fpr = 1 - as.numeric(rownames(urroc_ci)),
+    tpr = urroc_ci[, 2],
+    lower = urroc_ci[, 1],
+    upper = urroc_ci[, 3]
+  )
+  write_csv(roc_df, glue("sourcedata_{aurocnam}.csv"))
 
   #plot roc curve
   ggroc(urroc, color = "blue3", legacy.axes = TRUE) +
@@ -143,6 +156,9 @@ calibmaker <- function(actc, predp, outc) {
   min_y <- yrange[1] + yrangesize * 0.01
   max_y <- yrange[1] + yrangesize * 0.12
   y_text <- mean(c(min_y, max_y))
+
+  #save sourcedata
+  write_csv(ur_calib_df, "sourcedata_access_calibration_curve.csv")
 
   #calibration plot
   ggplot(ur_calib_df, aes(x = meanpp, y = sm_act)) +
@@ -379,11 +395,19 @@ d_roc <- roc_maker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
   "Access model",
-  "dischargeab_roc"
+  "accessab_roc"
 )
 
 ggsave(
   filename = "accessab_roc.png",
+  plot = d_roc,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  filename = "accessab_roc.pdf",
   plot = d_roc,
   width = 10,
   height = 10,
@@ -400,6 +424,14 @@ d_calib <- calibmaker(
 
 ggsave(
   filename = "accessab_calib.png",
+  plot = d_calib,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  filename = "accessab_calib.pdf",
   plot = d_calib,
   width = 10,
   height = 10,
@@ -439,6 +471,36 @@ title(
 )
 
 dev.off()
+
+pdf("accessab_pr.pdf", width = 6, height = 6)
+
+plot(
+  prc$curve[, 1],
+  prc$curve[, 2],
+  type = "n",
+  xlab = "Recall",
+  ylab = "Precision"
+)
+
+grid(col = "grey85", lty = 1)
+
+lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
+
+title(
+  main = paste0(
+    "Access model PR curve\n(AUC = ",
+    round(auprc, 3),
+    ")"
+  )
+)
+
+dev.off()
+
+prc_df <- data.frame(
+  recall = prc$curve[, 1],
+  precision = prc$curve[, 2]
+)
+write_csv(prc_df, "sourcedata_access_prc.csv")
 
 ##Other performance characteristics
 

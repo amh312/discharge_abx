@@ -22,6 +22,8 @@ shapbar <- function(df, labeltype) {
       unlist()
   )
 
+  write_csv(shap_filtered, glue("sourcedata_{labeltype}_dischargeab_shap.csv"))
+
   shapbarchart <- ggplot(shap_filtered, aes(x = token, y = total_abs_shap)) +
     geom_col(fill = "#00BFC4") +
     coord_flip() +
@@ -38,6 +40,14 @@ shapbar <- function(df, labeltype) {
 
   ggsave(
     filename = glue("{labeltype}dischargeab_shap.png"),
+    plot = shapbarchart,
+    width = 10,
+    height = 10,
+    units = "in",
+    dpi = 300
+  )
+  ggsave(
+    filename = glue("{labeltype}dischargeab_shap.pdf"),
     plot = shapbarchart,
     width = 10,
     height = 10,
@@ -62,6 +72,8 @@ ac_shapbar <- function(df, labeltype) {
       unlist()
   )
 
+  write_csv(shap_filtered, glue("sourcedata_{labeltype}_accesseab_shap.csv"))
+
   shapbarchart <- ggplot(shap_filtered, aes(x = token, y = total_abs_shap)) +
     geom_col(fill = "#F8766D") +
     coord_flip() +
@@ -84,6 +96,22 @@ ac_shapbar <- function(df, labeltype) {
     units = "in",
     dpi = 300
   )
+  ggsave(
+    filename = glue("ac_{labeltype}dischargeab_shap.pdf"),
+    plot = shapbarchart,
+    width = 10,
+    height = 10,
+    units = "in",
+    dpi = 300
+  )
+}
+
+###Convert secons in time df to hours, mins and seconds
+seconds_to_hms <- function(secs) {
+  h <- floor(secs / 3600)
+  m <- floor((secs %% 3600) / 60)
+  s <- round(secs %% 60, 1)
+  glue::glue("{h}h {m}m {s}s")
 }
 
 ##iterate over questionnaire discharge letters
@@ -112,12 +140,12 @@ write_csv(time_df, "script_times.csv")
 
 ##Total timings
 
-seconds_to_hms <- function(secs) {
-  h <- floor(secs / 3600)
-  m <- floor((secs %% 3600) / 60)
-  s <- round(secs %% 60, 1)
-  glue::glue("{h}h {m}m {s}s")
-}
+time_df2 <- read_csv("overall_single_prediction.csv") |>
+  mutate(`Time (hms)` = seconds_to_hms(`Time (secs)`)) |>
+  select(-`Time (secs)`)
+time_df3 <- read_csv("access_single_prediction.csv") |>
+  mutate(`Time (hms)` = seconds_to_hms(`Time (secs)`)) |>
+  select(-`Time (secs)`)
 
 time_df |>
   summarise(`Time (secs)` = sum(as.numeric(`Time (secs)`))) |>
@@ -127,4 +155,5 @@ time_df |>
   mutate(`Time (secs)` = as.numeric(`Time (secs)`)) |>
   mutate(`Time (hms)` = seconds_to_hms(`Time (secs)`)) |>
   select(-`Time (secs)`) |>
-  write_csv("script_times.csv")
+  rbind(time_df2, time_df3) |>
+  write_csv("sourcedata_script_times.csv")

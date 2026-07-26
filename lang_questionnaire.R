@@ -1,56 +1,16 @@
 #Questionnaire results
 
+##Set seed
+
+set.seed(123)
+
 ##Script timer
 
 start_time <- Sys.time()
 
 ##Functions
 
-###Performance tabulator
-cumul_rx <- data.frame(matrix(nrow = 0, ncol = 7))
-cumul_ac_rx <- data.frame(matrix(nrow = 0, ncol = 7))
-
-for (i in 1:6) {
-  r_x <- read_csv(glue("r_{i}.csv")) |>
-    rename(text = "question") |>
-    mutate(answer = case_when(answer == "Yes" ~ 1, answer == "No" ~ 0))
-  df_x <- read_csv(glue("df_{i}.csv")) |>
-    mutate(bert_inapp = case_when(pred == 0 ~ 1, pred == 1 ~ 0))
-  df_r_x <- r_x |> left_join(df_x, by = "text")
-  ac_r_x <- read_csv(glue("ac_r_{i}.csv")) |>
-    rename(text = "question") |>
-    mutate(answer = case_when(answer == "Yes" ~ 1, answer == "No" ~ 0))
-  ac_df_x <- read_csv(glue("ac_df_{i}.csv")) |>
-    mutate(bert_inapp = case_when(pred == 1 ~ 1, pred == 0 ~ 0))
-  ac_df_r_x <- ac_r_x |> left_join(ac_df_x, by = "text")
-  cumul_rx <- cumul_rx %>% rbind(df_r_x) %>% tibble()
-  cumul_ac_rx <- cumul_ac_rx %>% rbind(ac_df_r_x) %>% tibble()
-}
-
-###Check accuracy, sensitivitity, specificity, NPV and PPV on cumul_rx
-cumul_rx <- cumul_rx |>
-  mutate(bert_inapp = as.factor(bert_inapp), answer = as.factor(answer))
-cumul_cm <- confusionMatrix(
-  cumul_rx$bert_inapp,
-  cumul_rx$answer,
-  positive = "1"
-)
-cohen.kappa(as.matrix(cumul_rx[, c("bert_inapp", "answer")]))
-print(cumul_cm)
-
-###Check accuracy, sensitivitity, specificity, NPV and PPV on cumul_ac_rx
-cumul_ac_rx <- cumul_ac_rx |>
-  mutate(bert_inapp = as.factor(bert_inapp), answer = as.factor(answer))
-cumul_ac_cm <- confusionMatrix(
-  cumul_ac_rx$bert_inapp,
-  cumul_ac_rx$answer,
-  positive = "1"
-)
-cohen.kappa(as.matrix(cumul_ac_rx[, c("bert_inapp", "answer")]))
-print(cumul_ac_cm)
-
-threshold_list <- seq(0, 1, by = 0.05)
-
+###Iteration over decision thresholds
 decision_iterator <- function(df, ref_df, thresholds, model) {
   cumul_cm_sens <- data.frame(matrix(
     nrow = length(ref_df$byClass) + 6,
@@ -119,18 +79,7 @@ decision_iterator <- function(df, ref_df, thresholds, model) {
   return(cumul_cm_sens)
 }
 
-cumul_df <- decision_iterator(cumul_rx, cumul_cm, threshold_list, "overall")
-cumul_ac_df <- decision_iterator(
-  cumul_ac_rx,
-  cumul_ac_cm,
-  threshold_list,
-  "Access"
-)
-
-###Save results
-write_csv(cumul_df, "questionnaire_cumul_df.csv")
-write_csv(cumul_ac_df, "questionnaire_ac_cumul_df.csv")
-
+###Threshold line plot function
 threshold_plot <- function(df, model, int_line) {
   cumulplot_df <- df |> t() |> data.frame()
   colnames(cumulplot_df) <- gsub(".", " ", colnames(cumulplot_df), fixed = TRUE)
@@ -195,7 +144,7 @@ threshold_plot <- function(df, model, int_line) {
 
   print(cumulplot)
 
-  #save plot as png
+  #save plot
   ggsave(
     glue("questionnaire_{model}_threshold_plot.png"),
     plot = cumulplot,
@@ -203,12 +152,109 @@ threshold_plot <- function(df, model, int_line) {
     height = 6,
     dpi = 300
   )
+  ggsave(
+    glue("questionnaire_{model}_threshold_plot.pdf"),
+    plot = cumulplot,
+    width = 10,
+    height = 6,
+    dpi = 300
+  )
 }
 
+###Write performance metrics and confidence intervals together
+qu_perf_vec <- function(df) {
+  df_vec <- c(
+    glue("{round(df[1], 2)}({round(df[2], 2)}-{round(df[3], 2)})"),
+    glue("{round(df[4], 2)}({round(df[5], 2)}-{round(df[6], 2)})"),
+    glue("{round(df[7], 2)}({round(df[8], 2)}-{round(df[9], 2)})"),
+    glue("{round(df[10], 2)}({round(df[11], 2)}-{round(df[12], 2)})"),
+    glue("{round(df[13], 2)}({round(df[14], 2)}-{round(df[15], 2)})"),
+    glue("{round(df[16], 2)}({round(df[17], 2)}-{round(df[18], 2)})"),
+    glue("{round(df[19], 2)}({round(df[20], 2)}-{round(df[21], 2)})"),
+    glue("{round(df[22], 2)}({round(df[23], 2)}-{round(df[24], 2)})"),
+    glue("{round(df[25], 2)}({round(df[26], 2)}-{round(df[27], 2)})"),
+    glue("{round(df[28], 2)}({round(df[29], 2)}-{round(df[30], 2)})"),
+    glue("{round(df[31], 2)}({round(df[32], 2)}-{round(df[33], 2)})")
+  )
+
+  df_vec
+}
+
+##Questionnaire performance metrics
+
+###Tabulate from questionnaire result files
+cumul_rx <- data.frame(matrix(nrow = 0, ncol = 7))
+cumul_ac_rx <- data.frame(matrix(nrow = 0, ncol = 7))
+
+for (i in 1:6) {
+  r_x <- read_csv(glue("r_{i}.csv")) |>
+    rename(text = "question") |>
+    mutate(answer = case_when(answer == "Yes" ~ 1, answer == "No" ~ 0))
+  df_x <- read_csv(glue("df_{i}.csv")) |>
+    mutate(bert_inapp = case_when(pred == 0 ~ 1, pred == 1 ~ 0))
+  df_r_x <- r_x |> left_join(df_x, by = "text")
+  ac_r_x <- read_csv(glue("ac_r_{i}.csv")) |>
+    rename(text = "question") |>
+    mutate(answer = case_when(answer == "Yes" ~ 1, answer == "No" ~ 0))
+  ac_df_x <- read_csv(glue("ac_df_{i}.csv")) |>
+    mutate(bert_inapp = case_when(pred == 1 ~ 1, pred == 0 ~ 0))
+  ac_df_r_x <- ac_r_x |> left_join(ac_df_x, by = "text")
+  cumul_rx <- cumul_rx %>% rbind(df_r_x) %>% tibble()
+  cumul_ac_rx <- cumul_ac_rx %>% rbind(ac_df_r_x) %>% tibble()
+}
+
+###Quick check of performance metrics (overall model)
+cumul_rx <- cumul_rx |>
+  mutate(bert_inapp = as.factor(bert_inapp), answer = as.factor(answer))
+cumul_cm <- confusionMatrix(
+  cumul_rx$bert_inapp,
+  cumul_rx$answer,
+  positive = "1"
+)
+cohen.kappa(as.matrix(cumul_rx[, c("bert_inapp", "answer")]))
+print(cumul_cm)
+
+###Quick check of performance metrics (Access model)
+cumul_ac_rx <- cumul_ac_rx |>
+  mutate(bert_inapp = as.factor(bert_inapp), answer = as.factor(answer))
+cumul_ac_cm <- confusionMatrix(
+  cumul_ac_rx$bert_inapp,
+  cumul_ac_rx$answer,
+  positive = "1"
+)
+cohen.kappa(as.matrix(cumul_ac_rx[, c("bert_inapp", "answer")]))
+print(cumul_ac_cm)
+
+
+##Threshold analysis
+
+###Tabulate
+threshold_list <- seq(0, 1, by = 0.05)
+cumul_df <- decision_iterator(cumul_rx, cumul_cm, threshold_list, "overall")
+cumul_ac_df <- decision_iterator(
+  cumul_ac_rx,
+  cumul_ac_cm,
+  threshold_list,
+  "Access"
+)
+
+###Line plots
 threshold_plot(cumul_df, "overall", 40)
 threshold_plot(cumul_ac_df, "Access", 40)
 
-###Get confidence intervals for perf metrics
+###Save source data
+cumul_df |>
+  mutate(Metric = rownames(cumul_df)) |>
+  relocate(Metric, .before = 1) |>
+  write_csv("sourcedata_questionnaire_threshold_df.csv")
+cumul_ac_df |>
+  mutate(Metric = rownames(cumul_ac_df)) |>
+  relocate(Metric, .before = 1) |>
+  write_csv("sourcedata_questionnaire_ac_threshold_df.csv")
+
+##Full performance metric table
+
+###Bootstrapping for confidence intervals
 cumul_ci_df <- data.frame(matrix(nrow = 1000, ncol = 11))
 colnames(cumul_ci_df) <- names(cumul_cm$byClass)
 ac_cumul_ci_df <- data.frame(matrix(nrow = 1000, ncol = 11))
@@ -259,24 +305,6 @@ ac_sens_df <- ac_cumul_ci_df |>
       upper = ~ quantile(., 0.975)
     )
   ))
-
-qu_perf_vec <- function(df) {
-  df_vec <- c(
-    glue("{round(df[1], 2)}({round(df[2], 2)}-{round(df[3], 2)})"),
-    glue("{round(df[4], 2)}({round(df[5], 2)}-{round(df[6], 2)})"),
-    glue("{round(df[7], 2)}({round(df[8], 2)}-{round(df[9], 2)})"),
-    glue("{round(df[10], 2)}({round(df[11], 2)}-{round(df[12], 2)})"),
-    glue("{round(df[13], 2)}({round(df[14], 2)}-{round(df[15], 2)})"),
-    glue("{round(df[16], 2)}({round(df[17], 2)}-{round(df[18], 2)})"),
-    glue("{round(df[19], 2)}({round(df[20], 2)}-{round(df[21], 2)})"),
-    glue("{round(df[22], 2)}({round(df[23], 2)}-{round(df[24], 2)})"),
-    glue("{round(df[25], 2)}({round(df[26], 2)}-{round(df[27], 2)})"),
-    glue("{round(df[28], 2)}({round(df[29], 2)}-{round(df[30], 2)})"),
-    glue("{round(df[31], 2)}({round(df[32], 2)}-{round(df[33], 2)})")
-  )
-
-  df_vec
-}
 
 sensdf_vec <- sens_df |> qu_perf_vec()
 ac_sensdf_vec <- ac_sens_df |> qu_perf_vec()

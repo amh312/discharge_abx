@@ -2,6 +2,7 @@
 *.csv
 !aware_classification.csv
 !script_times.csv
+!r_example.csv
 *.png
 *.jpg
 *.jpeg

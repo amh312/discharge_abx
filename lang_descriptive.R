@@ -238,6 +238,17 @@ ggsave(
   dpi = 300
 )
 
+ggsave(
+  filename = "dischargeab_plot.pdf",
+  plot = discabs_plot,
+  width = 8,
+  height = 8,
+  units = "in",
+  dpi = 300
+)
+
+write_csv(ab_counts, "sourcedata_ab_counts.csv")
+
 ##Population characteristics
 
 ###Identify train and test datasets

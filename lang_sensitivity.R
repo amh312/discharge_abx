@@ -1,5 +1,9 @@
 #BERT SENSITIVITY ANALYSES
 
+##Set seed
+
+set.seed(123)
+
 ##Script timer
 
 start_time <- Sys.time()
@@ -18,12 +22,22 @@ calslope <- function(actc, predp) {
     act_probs = as.numeric(as.character(actc %>% unlist()))
   ) %>%
 
-    #put predicted probs into 10 bins
+    #put predicted probs into 10 bins (trycatch fallback if throws error)
     mutate(
-      probs_bin = cut(
-        pred_probs,
-        breaks = quantile(pred_probs, probs = seq(0.1, 1, by = 0.1), na.rm = T),
-        labels = F
+      probs_bin = tryCatch(
+        cut(
+          pred_probs,
+          breaks = unique(quantile(
+            pred_probs,
+            probs = seq(0.1, 1, by = 0.1),
+            na.rm = TRUE
+          )),
+          labels = FALSE,
+          include.lowest = TRUE
+        ),
+        error = function(e) {
+          cut(pred_probs, breaks = 5, labels = FALSE, include.lowest = TRUE)
+        }
       )
     ) %>%
 
@@ -244,6 +258,14 @@ fairness_plotter <- function(df, perfm, model) {
     units = "in",
     dpi = 300
   )
+  ggsave(
+    filename = glue("{model}_{perfm}_fairness.pdf"),
+    plot = fairplot,
+    width = 8,
+    height = 5,
+    units = "in",
+    dpi = 300
+  )
 }
 
 ###Plotting fairness threshold analysis
@@ -291,6 +313,14 @@ threshold_fairplot <- function(df, prot_group, model) {
     units = "in",
     dpi = 300
   )
+  ggsave(
+    filename = glue("{charac}_{model}_{prot_group}_fairness_threshold.pdf"),
+    plot = fairplot1,
+    width = 8,
+    height = 5,
+    units = "in",
+    dpi = 300
+  )
 }
 
 ###AUROC value and ROC curve
@@ -314,6 +344,15 @@ roc_maker <- function(actclass, predpr, outc, aurocnam) {
 
   #assign to global env
   assign(aurocnam, ur_auroc_value, envir = .GlobalEnv)
+
+  #write sourcedata to csv
+  roc_df <- data.frame(
+    fpr = 1 - as.numeric(rownames(urroc_ci)),
+    tpr = urroc_ci[, 2],
+    lower = urroc_ci[, 1],
+    upper = urroc_ci[, 3]
+  )
+  write_csv(roc_df, glue("sourcedata_{aurocnam}.csv"))
 
   #plot roc curve
   ggroc(urroc, color = "blue3", legacy.axes = TRUE) +
@@ -367,7 +406,7 @@ roc_maker <- function(actclass, predpr, outc, aurocnam) {
 }
 
 ###Calibration curve and slope value
-calibmaker <- function(actc, predp, outc) {
+calibmaker <- function(actc, predp, outc, analysis) {
   #predicted probs and actual class into dataframe
   ur_calib_df <- data.frame(
     pred_probs = predp %>% unlist(),
@@ -430,6 +469,9 @@ calibmaker <- function(actc, predp, outc) {
   min_y <- yrange[1] + yrangesize * 0.01
   max_y <- yrange[1] + yrangesize * 0.12
   y_text <- mean(c(min_y, max_y))
+
+  #save sourcedata
+  write_csv(ur_calib_df, glue("sourcedata_{analysis}_calibration_curve.csv"))
 
   #calibration plot
   ggplot(ur_calib_df, aes(x = meanpp, y = sm_act)) +
@@ -647,8 +689,8 @@ fairness_perfmets <- disc_perfs %>% fairness_test(pred, label, prob, 1000)
 ac_fairness_perfmets <- acc_perfs %>%
   fairness_test(ac_pred, ac_label, ac_prob, 1000)
 
-write_csv(fairness_perfmets, "fairness_perfmets.csv")
-write_csv(ac_fairness_perfmets, "ac_fairness_perfmets.csv")
+write_csv(fairness_perfmets, "sourcedata_fairness_perfmets.csv")
+write_csv(ac_fairness_perfmets, "sourcedata_ac_fairness_perfmets.csv")
 
 ###Fairness plots
 
@@ -698,8 +740,8 @@ for (i in seq_along(thresholds)) {
   disc_perfs_cum_ac <- disc_perfs_cum_ac |> rbind(disc_perfs_adj_ac)
 }
 
-write_csv(disc_perfs_cum, "fairness_perfmets_threshold.csv")
-write_csv(disc_perfs_cum_ac, "fairness_perfmets_threshold_ac.csv")
+write_csv(disc_perfs_cum, "sourcedata_fairness_perfmets_threshold.csv")
+write_csv(disc_perfs_cum_ac, "sourcedata_fairness_perfmets_threshold_ac.csv")
 
 ###Plot fairness threshold analysis
 duplicate_groups <- c("Marital status", "Race")
@@ -735,11 +777,19 @@ d_roc <- roc_maker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
   "Discharge antibiotic stability",
-  "dischargeab_roc"
+  "stab_dischargeab_roc"
 )
 
 ggsave(
   filename = "dischargeab_roc_stab.png",
+  plot = d_roc,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_roc_stab.pdf",
   plot = d_roc,
   width = 10,
   height = 10,
@@ -751,11 +801,19 @@ ggsave(
 d_calib <- calibmaker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
-  "Discharge antibiotic stability"
+  "Discharge antibiotic stability",
+  "stab_dischargeab"
 )
 
 ggsave(
   filename = "dischargeab_calib_stab.png",
+  plot = d_calib,
+  width = 10,
+  height = 10,
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_calib_stab.pdf",
   plot = d_calib,
   width = 10,
   height = 10,
@@ -794,6 +852,36 @@ title(
 )
 
 dev.off()
+
+pdf("dischargeab_pr_stab.pdf", width = 6, height = 6)
+
+plot(
+  prc$curve[, 1],
+  prc$curve[, 2],
+  type = "n",
+  xlab = "Recall",
+  ylab = "Precision"
+)
+
+grid(col = "grey85", lty = 1)
+
+lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
+
+title(
+  main = paste0(
+    "Discharge antibiotic stability PR curve\n(AUC = ",
+    round(auprc, 3),
+    ")"
+  )
+)
+
+dev.off()
+
+prc_df <- data.frame(
+  recall = prc$curve[, 1],
+  precision = prc$curve[, 2]
+)
+write_csv(prc_df, "sourcedata_stab_prc.csv")
 
 ###STABILITY Other performance characteristics
 
@@ -916,11 +1004,19 @@ d_roc <- roc_maker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
   "Discharge antibiotic time sensitivity",
-  "dischargeab_roc"
+  "timesens_dischargeab_roc"
 )
 
 ggsave(
   filename = "dischargeab_roc_timesens.png",
+  plot = d_roc,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_roc_timesens.pdf",
   plot = d_roc,
   width = 10,
   height = 10,
@@ -932,11 +1028,19 @@ ggsave(
 d_calib <- calibmaker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
-  "Discharge antibiotic time sensitivity"
+  "Discharge antibiotic time sensitivity",
+  "timesens_dischargeab"
 )
 
 ggsave(
   filename = "dischargeab_calib_timesens.png",
+  plot = d_calib,
+  width = 10,
+  height = 10,
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_calib_timesens.pdf",
   plot = d_calib,
   width = 10,
   height = 10,
@@ -981,6 +1085,40 @@ title(
 )
 
 dev.off()
+
+pdf(
+  "dischargeab_pr_timesens.pdf",
+  width = 6,
+  height = 6
+)
+
+plot(
+  prc$curve[, 1],
+  prc$curve[, 2],
+  type = "n",
+  xlab = "Recall",
+  ylab = "Precision"
+)
+
+grid(col = "grey85", lty = 1)
+
+lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
+
+title(
+  main = paste0(
+    "Discharge antibiotic time sensitivity PR curve\n(AUC = ",
+    round(auprc, 3),
+    ")"
+  )
+)
+
+dev.off()
+
+prc_df <- data.frame(
+  recall = prc$curve[, 1],
+  precision = prc$curve[, 2]
+)
+write_csv(prc_df, "sourcedata_timesens_prc.csv")
 
 ###TIMESENS Other performance characteristics
 
@@ -1103,11 +1241,19 @@ d_roc <- roc_maker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
   "Access antibiotic stability",
-  "dischargeab_roc"
+  "stab_accessab_roc"
 )
 
 ggsave(
   filename = "dischargeab_roc_stab_ac.png",
+  plot = d_roc,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_roc_stab_ac.pdf",
   plot = d_roc,
   width = 10,
   height = 10,
@@ -1119,11 +1265,19 @@ ggsave(
 d_calib <- calibmaker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
-  "Access antibiotic stability"
+  "Access antibiotic stability",
+  "stab_accessab"
 )
 
 ggsave(
   filename = "dischargeab_calib_stab_ac.png",
+  plot = d_calib,
+  width = 10,
+  height = 10,
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_calib_stab_ac.pdf",
   plot = d_calib,
   width = 10,
   height = 10,
@@ -1168,6 +1322,40 @@ title(
 )
 
 dev.off()
+
+pdf(
+  "dischargeab_pr_stab_ac.pdf",
+  width = 6,
+  height = 6
+)
+
+plot(
+  prc$curve[, 1],
+  prc$curve[, 2],
+  type = "n",
+  xlab = "Recall",
+  ylab = "Precision"
+)
+
+grid(col = "grey85", lty = 1)
+
+lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
+
+title(
+  main = paste0(
+    "Access antibiotic stability PR curve\n(AUC = ",
+    round(auprc, 3),
+    ")"
+  )
+)
+
+dev.off()
+
+prc_df <- data.frame(
+  recall = prc$curve[, 1],
+  precision = prc$curve[, 2]
+)
+write_csv(prc_df, "sourcedata_stab_ac_prc.csv")
 
 ###ACCESS STABILITY Other performance characteristics
 
@@ -1299,11 +1487,19 @@ d_roc <- roc_maker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
   "Access antibiotic time sensitivity",
-  "dischargeab_roc"
+  "timesens_accessab_roc"
 )
 
 ggsave(
   filename = "dischargeab_roc_timesens_ac.png",
+  plot = d_roc,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_roc_timesens_ac.pdf",
   plot = d_roc,
   width = 10,
   height = 10,
@@ -1315,11 +1511,19 @@ ggsave(
 d_calib <- calibmaker(
   perf_df %>% select(label),
   perf_df %>% select(prob),
-  "Access antibiotic time sensitivity"
+  "Access antibiotic time sensitivity",
+  "timesens_accessab"
 )
 
 ggsave(
   filename = "dischargeab_calib_timesens_ac.png",
+  plot = d_calib,
+  width = 10,
+  height = 10,
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_calib_timesens_ac.pdf",
   plot = d_calib,
   width = 10,
   height = 10,
@@ -1364,6 +1568,40 @@ title(
 )
 
 dev.off()
+
+pdf(
+  "dischargeab_pr_timesens_ac.pdf",
+  width = 6,
+  height = 6
+)
+
+plot(
+  prc$curve[, 1],
+  prc$curve[, 2],
+  type = "n",
+  xlab = "Recall",
+  ylab = "Precision"
+)
+
+grid(col = "grey85", lty = 1)
+
+lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
+
+title(
+  main = paste0(
+    "Access antibiotic time sensitivity PR curve\n(AUC = ",
+    round(auprc, 3),
+    ")"
+  )
+)
+
+dev.off()
+
+prc_df <- data.frame(
+  recall = prc$curve[, 1],
+  precision = prc$curve[, 2]
+)
+write_csv(prc_df, "sourcedata_timesens_ac_prc.csv")
 
 ###ACCESS TIMESENS Other performance characteristics
 

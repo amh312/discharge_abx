@@ -273,3 +273,5 @@ test_model = bert_predict(discmodel)
 predict_end_time = datetime.now()
 time_taken = predict_end_time - predict_start_time
 print("Time taken for a single prediction (seconds): ", time_taken.total_seconds())
+time_df2 = pd.DataFrame({"Script": ["Overall model single prediction"], "Time (secs)": [time_taken.total_seconds()]})
+time_df2.to_csv("overall_single_prediction.csv", index=False)

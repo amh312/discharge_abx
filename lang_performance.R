@@ -1,5 +1,9 @@
 #MODEL PERFORMANCE
 
+##Set seed
+
+set.seed(123)
+
 ##Script timer
 
 start_time <- Sys.time()
@@ -27,6 +31,15 @@ roc_maker <- function(actclass, predpr, outc, aurocnam) {
 
   #assign to global env
   assign(aurocnam, ur_auroc_value, envir = .GlobalEnv)
+
+  #write sourcedata to csv
+  roc_df <- data.frame(
+    fpr = 1 - as.numeric(rownames(urroc_ci)),
+    tpr = urroc_ci[, 2],
+    lower = urroc_ci[, 1],
+    upper = urroc_ci[, 3]
+  )
+  write_csv(roc_df, glue("sourcedata_{aurocnam}.csv"))
 
   #plot roc curve
   ggroc(urroc, color = "blue3", legacy.axes = TRUE) +
@@ -143,6 +156,9 @@ calibmaker <- function(actc, predp, outc) {
   min_y <- yrange[1] + yrangesize * 0.01
   max_y <- yrange[1] + yrangesize * 0.12
   y_text <- mean(c(min_y, max_y))
+
+  #save sourcedata
+  write_csv(ur_calib_df, "sourcedata_calibration_curve.csv")
 
   #calibration plot
   ggplot(ur_calib_df, aes(x = meanpp, y = sm_act)) +
@@ -403,6 +419,14 @@ ggsave(
   units = "in",
   dpi = 300
 )
+ggsave(
+  filename = "dischargeab_roc.pdf",
+  plot = d_roc,
+  width = 10,
+  height = 10,
+  units = "in",
+  dpi = 300
+)
 
 ###Calibration curve
 d_calib <- calibmaker(
@@ -411,7 +435,14 @@ d_calib <- calibmaker(
   "Overall model"
 )
 ggsave(
-  filename = "dischargeab_calib.png",
+  filename = "dischargeab_calib.pdf",
+  plot = d_calib,
+  width = 10,
+  height = 10,
+  dpi = 300
+)
+ggsave(
+  filename = "dischargeab_calib.pdf",
   plot = d_calib,
   width = 10,
   height = 10,
@@ -439,6 +470,27 @@ title(
   main = paste0("Overall model PR curve\n(AUC = ", round(auprc, 3), ")")
 )
 dev.off()
+
+pdf("dischargeab_pr.pdf", width = 6, height = 6)
+plot(
+  prc$curve[, 1],
+  prc$curve[, 2],
+  type = "n",
+  xlab = "Recall",
+  ylab = "Precision"
+)
+grid(col = "grey85", lty = 1)
+lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
+title(
+  main = paste0("Overall model PR curve\n(AUC = ", round(auprc, 3), ")")
+)
+dev.off()
+
+prc_df <- data.frame(
+  recall = prc$curve[, 1],
+  precision = prc$curve[, 2]
+)
+write_csv(prc_df, "sourcedata__prc.csv")
 
 ##Bootstrapped performance characteristics
 
@@ -553,12 +605,28 @@ perf_cis <- perf_cis %>%
 write_csv(perf_cis, "performance_metrics.csv")
 
 ##Check minimum sample size for questionnaire (Cohen’s kappa 0.41, lower CI 0.21, prescription rate 1/3)
-kappaSize::CIBinary(
+kapsize <- kappaSize::CIBinary(
   kappa0 = 0.41,
   kappaL = 0.21,
   alpha = 0.05,
   props = 0.33
 )
+kappasize_df <- data.frame(
+  "Cohen's kappa" = 0.41,
+  "Lower CI" = 0.21,
+  "Alpha" = 0.05,
+  "Prescription rate" = 0.33,
+  "Minimum sample size" = kapsize$n
+) |>
+  tibble()
+colnames(kappasize_df) <- c(
+  "Cohen's kappa",
+  "Lower CI",
+  "Alpha",
+  "Prescription rate",
+  "Minimum sample size"
+)
+write_csv(kappasize_df, "sourcedata_kappa_sample_size.csv")
 
 ##Write discharge summary questions CSV
 
