@@ -467,7 +467,7 @@ plot(
 grid(col = "grey85", lty = 1)
 lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
-  main = paste0("Overall model PR curve\n(AUC = ", round(auprc, 3), ")")
+  main = paste0("Overall model PR curve\n(AUC = ", round(auprc, 2), ")")
 )
 dev.off()
 
@@ -482,7 +482,7 @@ plot(
 grid(col = "grey85", lty = 1)
 lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
-  main = paste0("Overall model PR curve\n(AUC = ", round(auprc, 3), ")")
+  main = paste0("Overall model PR curve\n(AUC = ", round(auprc, 2), ")")
 )
 dev.off()
 
@@ -494,7 +494,7 @@ write_csv(prc_df, "sourcedata__prc.csv")
 
 ##Bootstrapped performance characteristics
 
-###Establish bootsrtrapping dataframe
+###Establish bootstrapping dataframe
 perfmets <- data.frame(matrix(nrow = 1000, ncol = 10))
 colnames(perfmets) <- c(
   "Precision",
@@ -596,7 +596,7 @@ perf_cis$Metric <- rownames(perf_cis)
 perf_cis <- perf_cis %>%
   mutate(
     `Overall antibiotic model (95% CI)` = glue(
-      "{round(value,3)}({round(lower,3)}-{round(upper,3)})"
+      "{sprintf('%.2f', round(value,2))} ({sprintf('%.2f', round(lower,2))}-{sprintf('%.2f', round(upper,2))})"
     )
   ) %>%
   select(-c(lower, upper, value)) %>%

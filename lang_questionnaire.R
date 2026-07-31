@@ -180,6 +180,11 @@ qu_perf_vec <- function(df) {
   df_vec
 }
 
+##Read-in
+
+bert_preds <- read_csv("bert_preds.csv")
+ac_bert_preds <- read_csv("access_bert_preds.csv")
+
 ##Questionnaire performance metrics
 
 ###Tabulate from questionnaire result files
@@ -203,6 +208,29 @@ for (i in 1:6) {
   cumul_ac_rx <- cumul_ac_rx %>% rbind(ac_df_r_x) %>% tibble()
 }
 
+##Backstop to ensure predictions match final validation dataset
+bert_preds_probs <- bert_preds |>
+  select(text, prob) |>
+  mutate(prob = as.numeric(prob))
+ac_bert_preds_probs <- ac_bert_preds |>
+  select(text, prob) |>
+  mutate(prob = as.numeric(prob))
+
+cumul_rx <- cumul_rx |>
+  select(-c(prob, pred, bert_inapp)) |>
+  left_join(bert_preds_probs, by = "text")
+cumul_ac_rx <- cumul_ac_rx |>
+  select(-c(prob, pred, bert_inapp)) |>
+  left_join(ac_bert_preds_probs, by = "text")
+
+cumul_rx <- cumul_rx |>
+  mutate(pred = ifelse(prob >= 0.5, 1, 0)) |>
+  mutate(bert_inapp = case_when(pred == 0 ~ 1, pred == 1 ~ 0))
+
+cumul_ac_rx <- cumul_ac_rx |>
+  mutate(pred = ifelse(prob >= 0.5, 1, 0)) |>
+  mutate(bert_inapp = case_when(pred == 1 ~ 1, pred == 0 ~ 0))
+
 ###Quick check of performance metrics (overall model)
 cumul_rx <- cumul_rx |>
   mutate(bert_inapp = as.factor(bert_inapp), answer = as.factor(answer))
@@ -225,7 +253,6 @@ cumul_ac_cm <- confusionMatrix(
 cohen.kappa(as.matrix(cumul_ac_rx[, c("bert_inapp", "answer")]))
 print(cumul_ac_cm)
 
-
 ##Threshold analysis
 
 ###Tabulate
@@ -239,8 +266,8 @@ cumul_ac_df <- decision_iterator(
 )
 
 ###Line plots
-threshold_plot(cumul_df, "overall", 40)
-threshold_plot(cumul_ac_df, "Access", 40)
+threshold_plot(cumul_df, "overall", 30)
+threshold_plot(cumul_ac_df, "Access", 30)
 
 ###Save source data
 cumul_df |>

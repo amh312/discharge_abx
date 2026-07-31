@@ -846,7 +846,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Discharge antibiotic stability PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -870,7 +870,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Discharge antibiotic stability PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -986,7 +986,7 @@ perf_cis$Metric <- rownames(perf_cis)
 perf_cis <- perf_cis %>%
   mutate(
     `Overall antibiotic model (95% CI)` = glue(
-      "{round(value,3)}({round(lower,3)}-{round(upper,3)})"
+      "{sprintf('%.2f', round(value,2))} ({sprintf('%.2f', round(lower,2))}-{sprintf('%.2f', round(upper,2))})"
     )
   ) %>%
   select(-c(lower, upper, value)) %>%
@@ -1079,7 +1079,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Discharge antibiotic time sensitivity PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -1107,7 +1107,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Discharge antibiotic time sensitivity PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -1223,7 +1223,7 @@ perf_cis$Metric <- rownames(perf_cis)
 perf_cis <- perf_cis %>%
   mutate(
     `Overall antibiotic model (95% CI)` = glue(
-      "{round(value,3)}({round(lower,3)}-{round(upper,3)})"
+      "{sprintf('%.2f', round(value,2))} ({sprintf('%.2f', round(lower,2))}-{sprintf('%.2f', round(upper,2))})"
     )
   ) %>%
   select(-c(lower, upper, value)) %>%
@@ -1316,7 +1316,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Access antibiotic stability PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -1344,7 +1344,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Access antibiotic stability PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -1460,7 +1460,7 @@ perf_cis$Metric <- rownames(perf_cis)
 perf_cis <- perf_cis %>%
   mutate(
     `Overall antibiotic model (95% CI)` = glue(
-      "{round(value,3)}({round(lower,3)}-{round(upper,3)})"
+      "{sprintf('%.2f', round(value,2))} ({sprintf('%.2f', round(lower,2))}-{sprintf('%.2f', round(upper,2))})"
     )
   ) %>%
   select(-c(lower, upper, value)) %>%
@@ -1562,7 +1562,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Access antibiotic time sensitivity PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -1590,7 +1590,7 @@ lines(prc$curve[, 1], prc$curve[, 2], col = "blue", lwd = 2)
 title(
   main = paste0(
     "Access antibiotic time sensitivity PR curve\n(AUC = ",
-    round(auprc, 3),
+    round(auprc, 2),
     ")"
   )
 )
@@ -1706,7 +1706,7 @@ perf_cis$Metric <- rownames(perf_cis)
 perf_cis <- perf_cis %>%
   mutate(
     `Overall antibiotic model (95% CI)` = glue(
-      "{round(value,3)}({round(lower,3)}-{round(upper,3)})"
+      "{sprintf('%.2f', round(value,2))} ({sprintf('%.2f', round(lower,2))}-{sprintf('%.2f', round(upper,2))})"
     )
   ) %>%
   select(-c(lower, upper, value)) %>%
