@@ -129,6 +129,10 @@ def madeup_shap(text_madeup,savfile_name):
     ###Get SHAP values from fictional discharge letter
     madeup_shapvalues, _ = shapmaker(savdirec, madeup_dataset)
 
+    ###Save SHAP values to csv
+    madeup_shapdf = shap_extractor(madeup_shapvalues)
+    madeup_shapdf.to_csv(f'sourcedata_{savfile_name}.csv', index=False)
+
     ###Text plot
     html_str = shap.plots._text.text(madeup_shapvalues[0][:, 1], display=False)
 
