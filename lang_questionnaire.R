@@ -318,8 +318,8 @@ sens_df <- cumul_ci_df |>
     everything(),
     list(
       mean = mean,
-      lower = ~ quantile(., 0.025),
-      upper = ~ quantile(., 0.975)
+      lower = ~ quantile(., 0.025, na.rm = T),
+      upper = ~ quantile(., 0.975, na.rm = T)
     )
   ))
 
@@ -328,8 +328,8 @@ ac_sens_df <- ac_cumul_ci_df |>
     everything(),
     list(
       mean = mean,
-      lower = ~ quantile(., 0.025),
-      upper = ~ quantile(., 0.975)
+      lower = ~ quantile(., 0.025, na.rm = T),
+      upper = ~ quantile(., 0.975, na.rm = T)
     )
   ))
 
