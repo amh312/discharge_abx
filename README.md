@@ -42,3 +42,18 @@ To then run **lang_questionnaire.R**, **BERT_SHAP.py**, **BERT_SHAP_Access.py** 
 Question wording for the overall model was *"You are on an antibiotic stewardship team, tasked with identifying inappropriate discharge antibiotic prescriptions. You will see 25 discharge letters - for each case, if you think discharging the patient on an antibiotic is very likely to be INappropriate based on the information provided, please select 'Yes'. Otherwise, please select 'No'. Please note you are only reviewing the appropriateness of the decision WHETHER to discharge on an antibiotic, NOT the choice of antibiotic agent."*.
 
 Question wording for the Access model was *"Your antimicrobial stewardship team is now tasked with reviewing choices of discharge antimicrobial agents for their appropriateness. You will review another 25 discharge letters - for each case, answer 'yes' if you think that discharge on a broad-spectrum antibiotic treatment is very likely to be INappropriate, i.e., that either that a narrower-spectrum (WHO Access) antibiotic would be more appropriate, and/or that no antibiotic therapy is indicated. Otherwise, please select 'no'."*.
+
+***Testing the code***
+
+To test the functionality of the code for the main analysis, download all csv files in this repository, and remove the "_test" suffix from any csv file names where it is present. You can then test the following scripts:
+
+   1. **BERT_discharges.py**
+   2. **BERT_access.py**
+   3. **lang_performance.R**
+   4. **lang_access_performance.R**
+   5. **lang_questionnaire.R**
+   6. **BERT_SHAP.py**
+   7. **BERT_SHAP_Access.py**
+   8. **lang_SHAP.R**
+
+The test CSVs contain collections of random words, so the results will effectively be random but can be used to demonstrate the code's functionality.
