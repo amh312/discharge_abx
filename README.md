@@ -45,7 +45,7 @@ Question wording for the Access model was *"Your antimicrobial stewardship team 
 
 ***Testing the code***
 
-To test the functionality of the code for the main analysis without requiring download of the real PhysioNet datasets, download all csv files in this repository, and remove the "_test" suffix from any csv file names where it is present. All scripts apart from those that are specifically tailored to the engineering and descriptive characteristics of the PhysioNet datasets can then be run in the following order:
+To test the functionality of the code for the main analysis without requiring download of the real PhysioNet datasets, download all csv files in this repository, and **remove the "_test" suffix from any csv file names where it is present**. All scripts apart from those that are specifically tailored to the engineering and descriptive characteristics of the PhysioNet datasets can then be run in the following order:
 
    1. **lang_packages&setup.R**
    2. **BERT_discharges.py**
@@ -61,3 +61,7 @@ To test the functionality of the code for the main analysis without requiring do
    12. **lang_sensitivity.R**
 
 The test CSVs contain collections of random words, so the results will be random but can be used to demonstrate the code's functionality.
+
+***Reviewing the code***
+
+R code follows the general structure of function definitions, then data uploads, then code that embeds the functions. Python code follows the same general structure, except that packages are imported at the beginning of each script (for R scripts this is done once in *lang_packages&setup.R*). Sections are denoted with a double hash, subsections with a triple hash, and sections within functions with a single hash. R code was written during a transition between R Studio and Positron IDEs, resulting in a mixture of "%>%" and "|>" to denote pipes for tidyverse functions.
