@@ -45,7 +45,7 @@ Question wording for the Access model was *"Your antimicrobial stewardship team 
 
 ***Testing the code***
 
-To test the functionality of the code for the main analysis without requiring download of the real PhysioNet datasets, download all csv files in this repository, and **remove the "_test" suffix from any csv file names where it is present**. All scripts apart from those that are specifically tailored to the engineering and descriptive characteristics of the PhysioNet datasets can then be run in the following order:
+To test the functionality of the code for the main analysis without requiring download of the real PhysioNet datasets, download all csv files in this repository, and **remove the "_test" suffix from any csv file names where it is present**. All scripts apart from those that are specifically tailored to the engineering and descriptive characteristics of the PhysioNet datasets can then be run in the following order: 
 
    1. **lang_packages&setup.R**
    2. **BERT_discharges.py**
