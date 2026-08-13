@@ -1,0 +1,58 @@
+Characteristic,Group
+Gender,F
+··,M
+Age group,20-29
+··,30-39
+··,40-49
+··,50-59
+··,60-69
+··,70-79
+··,80-89
+··,≤19
+··,≥90
+Race,Asian
+··,Black
+··,Hispanic
+··,Other
+··,White
+English spoken,Unknown
+··,Yes
+Marital status,Divorced
+··,Married
+··,Single
+··,Unknown
+··,Widowed
+Insurance*,Other
+··,Medicare
+··,Medicaid
+Admission period*,2020 - 2022
+··,2017 - 2019
+··,2014 - 2016
+··,2011 - 2013
+··,2008 - 2010
+Discharge location*,Unknown
+··,Skilled Nursing Facility
+··,Rehab
+··,Psych Facility
+··,Other Facility
+··,Hospice
+··,Home Health Care
+··,Home
+··,Healthcare Facility
+··,Died
+··,Chronic/Long Term Acute Care
+··,Assisted Living
+··,Against Advice
+··,Acute Hospital
+Discharged on ≥1 antibiotic*,Yes
+··,No
+Discharged on ≥1 Access antibiotic*,Yes
+··,No
+Discharged on ≥1 Watch antibiotic*,Yes
+··,No
+Discharged on ≥1 Reserve antibiotic*,Yes
+··,No
+Discharged only on Access antibiotic(s)*,Yes
+··,No
+Total,Patients
+··,Discharges

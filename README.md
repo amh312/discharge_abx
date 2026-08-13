@@ -26,7 +26,7 @@ Before running the code, the data should be saved into a secure local directory,
 
 To reproduce the analyses, scripts must be run in this order:  
 
-   1. **lang_packages&setup.R***
+   1. **lang_packages&setup.R**
    2. **lang_disc_cleaning.R**
    3. **BERT_discharges.py**
    4. **BERT_access.py**
@@ -45,15 +45,19 @@ Question wording for the Access model was *"Your antimicrobial stewardship team 
 
 ***Testing the code***
 
-To test the functionality of the code for the main analysis, download all csv files in this repository, and remove the "_test" suffix from any csv file names where it is present. You can then test the following scripts:
+To test the functionality of the code for the main analysis without requiring download of the real PhysioNet datasets, download all csv files in this repository, and remove the "_test" suffix from any csv file names where it is present. All scripts apart from those that are specifically tailored to the engineering and descriptive characteristics of the PhysioNet datasets can then be run in the following order:
 
-   1. **BERT_discharges.py**
-   2. **BERT_access.py**
-   3. **lang_performance.R**
-   4. **lang_access_performance.R**
-   5. **lang_questionnaire.R**
-   6. **BERT_SHAP.py**
-   7. **BERT_SHAP_Access.py**
-   8. **lang_SHAP.R**
+   1. **lang_packages&setup.R**
+   2. **BERT_discharges.py**
+   3. **BERT_access.py**
+   4. **lang_performance.R**
+   5. **lang_access_performance.R**
+   6. **lang_questionnaire.R**
+   7. **BERT_SHAP.py**
+   8. **BERT_SHAP_Access.py**
+   9. **lang_SHAP.R**
+   10. **BERT_stability.py**
+   11. **BERT_timesens.py**
+   12. **lang_sensitivity.R**
 
-The test CSVs contain collections of random words, so the results will effectively be random but can be used to demonstrate the code's functionality.
+The test CSVs contain collections of random words, so the results will be random but can be used to demonstrate the code's functionality.
