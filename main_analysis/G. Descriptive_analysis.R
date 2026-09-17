@@ -1,5 +1,19 @@
 #DESCRIPTIVE DATA
 
+##Load packages
+
+###v2.0.0
+library(tidyverse)
+
+###v1.8.0
+library(glue)
+
+###v3.0.1
+library(AMR)
+
+###v1.1.7
+library(rlang)
+
 ##Script timer
 
 start_time <- Sys.time()

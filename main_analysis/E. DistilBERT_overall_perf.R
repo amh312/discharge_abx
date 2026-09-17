@@ -1,5 +1,25 @@
 #MODEL PERFORMANCE
 
+##Load packages
+
+###v2.0.0
+library(tidyverse)
+
+###v1.8.0
+library(glue)
+
+###v1.19.0.1
+library(pROC)
+
+###v1.4
+library(PRROC)
+
+###v7.0.1
+library(caret)
+
+###v1.2
+library(kappaSize)
+
 ##Set seed
 
 set.seed(123)

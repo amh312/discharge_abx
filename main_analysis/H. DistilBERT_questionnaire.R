@@ -1,5 +1,19 @@
 #Questionnaire results
 
+##Load packages
+
+###v2.0.0
+library(tidyverse)
+
+###v1.8.0
+library(glue)
+
+###v7.0.1
+library(caret)
+
+###v2.6.5
+library(psych)
+
 ##Set seed
 
 set.seed(123)

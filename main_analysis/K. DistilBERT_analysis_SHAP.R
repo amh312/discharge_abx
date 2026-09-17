@@ -1,5 +1,13 @@
 #SHAP values across discharge and access models
 
+##Load packages
+
+###v2.0.0
+library(tidyverse)
+
+###v1.8.0
+library(glue)
+
 ##Script timer
 
 start_time <- Sys.time()

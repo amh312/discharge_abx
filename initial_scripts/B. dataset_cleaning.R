@@ -1,5 +1,25 @@
 #DISCHARGE TEXT CLEANING
 
+##Load packages
+
+###v2.0.0
+library(tidyverse)
+
+###v3.0.1
+library(AMR)
+
+###v7.0.1
+library(caret)
+
+###v1.0.6
+library(MIMER)
+
+###v1.8.0
+library(glue)
+
+###v1.1.7
+library(rlang)
+
 ##Initialise script timer
 
 time_df <- data.frame(matrix(ncol = 2, nrow = 1))
