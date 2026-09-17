@@ -612,57 +612,55 @@ ur_perf_mets <- function(df, indexrows, bootstr = T) {
 }
 
 ###Calibration slope only
+
 calslope <- function(actc, predp) {
-  #predicted probs and actual class into dataframe
-  ur_calib_df <- data.frame(
-    pred_probs = predp %>% unlist(),
-    act_probs = as.numeric(as.character(actc %>% unlist()))
-  ) %>%
+  tryCatch(
+    {
+      #predicted probs and actual class into dataframe
+      ur_calib_df <- data.frame(
+        pred_probs = predp %>% unlist(),
+        act_probs = as.numeric(as.character(actc %>% unlist()))
+      ) %>%
 
-    #put predicted probs into 10 bins
-    mutate(
-      probs_bin = cut(
-        pred_probs,
-        breaks = quantile(pred_probs, probs = seq(0.1, 1, by = 0.1), na.rm = T),
-        labels = F
-      )
-    ) %>%
+        #put predicted probs into up to 10 bins (fewer if quantile breaks tie)
+        mutate(
+          probs_bin = cut(
+            pred_probs,
+            breaks = unique(quantile(
+              pred_probs,
+              probs = seq(0.1, 1, by = 0.1),
+              na.rm = T
+            )),
+            labels = F,
+            include.lowest = T
+          )
+        ) %>%
 
-    #get means and n samples
-    group_by(probs_bin) %>%
-    summarise(
-      meanpp = mean(pred_probs),
-      act_prop = mean(act_probs),
-      nsamp = n()
-    ) %>%
-    ungroup()
+        #get means and n samples
+        group_by(probs_bin) %>%
+        summarise(
+          meanpp = mean(pred_probs),
+          act_prop = mean(act_probs),
+          nsamp = n()
+        ) %>%
+        ungroup()
 
-  #loess smoothed values for actual probabilities
-  loesspreds <- predict(
-    loess(ur_calib_df$act_prop ~ ur_calib_df$meanpp),
-    span = 1,
-    se = T
+      #need at least 2 distinct bins with variation in meanpp to fit a slope
+      if (
+        nrow(ur_calib_df) < 2 ||
+          length(unique(ur_calib_df$meanpp)) < 2
+      ) {
+        return(NA_real_)
+      }
+
+      #slope from linear model
+      urcalib_model <- lm(ur_calib_df$act_prop ~ ur_calib_df$meanpp)
+      unname(coef(urcalib_model)[2])
+    },
+    error = function(e) {
+      NA_real_
+    }
   )
-  ur_calib_df$sm_act <- loesspreds$fit
-
-  #smoothing 95% confidence intervals
-  ur_calib_df$upperci <- loesspreds$fit + 1.96 * loesspreds$se.fit
-  ur_calib_df$lowerci <- loesspreds$fit - 1.96 * loesspreds$se.fit
-
-  #actual means 95% confidence intervals
-  ur_calib_df$grupci <- ur_calib_df$act_prop +
-    (sqrt(
-      (ur_calib_df$act_prop * 1 - ur_calib_df$act_prop) / ur_calib_df$nsamp
-    ) *
-      1.96)
-  ur_calib_df$grloci <- ur_calib_df$act_prop -
-    ((sqrt(ur_calib_df$act_prop * 1 - ur_calib_df$act_prop) /
-      ur_calib_df$nsamp) *
-      1.96)
-
-  #slope from linear model
-  urcalib_model <- lm(ur_calib_df$act_prop ~ ur_calib_df$meanpp)
-  coef(urcalib_model)[2]
 }
 
 ##Fairness analysis
