@@ -50,7 +50,7 @@ To test the functionality of the code for the main analysis without requiring do
    3. **Run all scripts in the *main_analysis* folder **except script G****
    4. **Run all scripts in the *sensitivity_analysis* folder**
 
-The scripts must again be run in **alphabetical order**. The test CSVs contain collections of random words, so the results will be random but can be used to demonstrate the code's functionality.
+The scripts must again be run in **alphabetical order** (omitting script G). The test CSVs contain collections of random words, so the results will be random but can be used to demonstrate the code's functionality.
 
 ***Reviewing the code***
 
