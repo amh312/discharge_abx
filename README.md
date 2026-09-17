@@ -23,7 +23,7 @@ This code was written and run using *R* version 4.3.2 and Python version 3.11.15
 This code will exactly reproduce the clinical prediction model results of the study and descriptive data. It will, however, not necessarily sample the same discharge letters that were used for the clinician review exercise. To reproduce the main analysis:
 
    1. **Save *admissions.csv*, *patients.csv*, (MIMIC-IV) and *discharge.csv* (MIMIC-IV-Note) into a secure local directory**
-   2. **Download *aware_classification.csv* from this repo into the same directory**
+   2. **Download *aware_classification.csv* from the git *test_data* folder into the same directory**
    3. **Install the required package versions listed in *packages.txt***
    4. **Run scripts in the initial_scripts folder (A-B)**
    5. **Run scripts in the main_analysis folder (C-K)**
