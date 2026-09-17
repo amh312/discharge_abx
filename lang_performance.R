@@ -585,9 +585,9 @@ perf_vec <- c(
   as.numeric(auc(thisroc)),
   thisprc$auc.integral,
   calslope(
-    samp_perfs %>%
+    perf_df %>%
       select(label),
-    samp_perfs %>%
+    perf_df %>%
       select(prob)
   )
 )
@@ -705,7 +705,6 @@ write_csv(
   q_6,
   "q_6.csv"
 )
-
 
 ##Record time taken to run the script
 
