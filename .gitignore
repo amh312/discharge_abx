@@ -21,6 +21,8 @@
 !pt_access_only_key_test.csv
 !stab_orig_test.csv
 !stab_orig_key_test.csv
+!stab_access_test.csv
+!stab_access_key_test.csv
 !pt_2010_test.csv
 !pt_2019_test.csv
 !pt_timekey_test.csv
