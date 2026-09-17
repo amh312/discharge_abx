@@ -278,6 +278,49 @@ cumul_ac_df |>
   mutate(Metric = rownames(cumul_ac_df)) |>
   relocate(Metric, .before = 1) |>
   write_csv("sourcedata_questionnaire_ac_threshold_df.csv")
+cumul_df <- cumul_df |>
+  filter(Metric != "Sensitivity") |>
+  filter(Metric != "Pos Pred Value")
+cumul_ac_df <- cumul_ac_df |>
+  filter(Metric != "Sensitivity") |>
+  filter(Metric != "Pos Pred Value")
+cumul_df <- read_csv("sourcedata_questionnaire_threshold_df.csv")
+cumul_ac_df <- read_csv("sourcedata_questionnaire_ac_threshold_df.csv")
+
+###Table of precision and recall across thresholds and number flagged
+suppl_table <- function(df, model) {
+  cumul_supp <- df |>
+    filter(
+      grepl("Tot|Rec|Prec", Metric)
+    ) |>
+    t() |>
+    data.frame() |>
+    relocate(3, .before = 1)
+  cumul_supp$Threshold <- rownames(cumul_supp)
+  cumul_supp[1, 1] <- "Threshold"
+  colnames(cumul_supp) <- c(
+    glue("{model} Model flagged"),
+    glue("{model} Model Precision"),
+    glue("{model} Model Recall"),
+    "Threshold"
+  )
+  rownames(cumul_supp) <- NULL
+  cumul_supp <- cumul_supp |>
+    slice(-1) |>
+    mutate(across(colnames(cumul_supp), as.numeric)) |>
+    mutate(across(glue("{model} Model Precision"):Threshold, round, 2)) |>
+    relocate(Threshold, .before = 1)
+
+  return(cumul_supp)
+}
+
+cumul_supp <- suppl_table(cumul_df, "Overall")
+cumul_ac_supp <- suppl_table(cumul_ac_df, "Access")
+cumul_supp_both <- cumul_supp |>
+  left_join(cumul_ac_supp, by = "Threshold") |>
+  rename(`Probability threshold` = "Threshold")
+
+write_csv(cumul_supp_both, "cumul_supp_both.csv")
 
 ##Full performance metric table
 
@@ -373,6 +416,9 @@ acc_cis <- c(
 )
 
 full_qu_perf <- full_qu_perf |> rbind(kappa_cis, acc_cis)
+full_qu_perf <- full_qu_perf |>
+  filter(Metric != "Sensitivity") |>
+  filter(Metric != "Pos Pred Value")
 
 write_csv(full_qu_perf, "full_qu_perf.csv")
 
