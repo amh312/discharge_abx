@@ -1,20 +1,39 @@
-#BERT discharge stability analysis
+#BERT discharge antibiotic prediction
+
+###############################################
+###############################################
 
 ##Packages
 
+###transformers v5.4.0
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, set_seed
-import torch
+
+###datasets v4.8.4
 from datasets import Dataset
+
+###pandas v3.0.1
 import pandas as pd
+
+###numpy v1.26.4
 import numpy as np
+
+###torch v2.11.0
+import torch
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
+
 import random
 from datetime import datetime
+
+###############################################
+###############################################
 
 ##Initialise script timer
 
 start_time = datetime.now()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -22,58 +41,96 @@ start_time = datetime.now()
 def tokener(examples):
     return tokeniser(examples["text"], padding="max_length", truncation=True)
 
+###Truncation count
+def count_tokens_untruncated(examples):
+    return {'num_tokens': [len(ids) for ids in tokeniser(examples['text'], truncation=False)['input_ids']]}
+
 ###Train-test split
 def ttsplit(token_data,testsize):
+
+    #split index
     split_disc_bertdf = token_data.train_test_split(test_size=testsize)
+
+    #split datasets
     traindf = split_disc_bertdf['train']
     testdf = split_disc_bertdf['test']
+
     return traindf, testdf
 
 ###Removal of pts in the test set from the training set
 def remove_testpatients(train_df, test_df,key_df):
+
+    #convert to dfs
     train_disc_bertdf2 = train_df.to_pandas()
     test_disc_bertdf2 = test_df.to_pandas()
+
+    #get texts from train and test sets
     train_texts = train_disc_bertdf2['text']
     test_texts = test_disc_bertdf2['text']
+
+    #make key df
     key_df2 = key_df.rename(columns={"pt_text": "text"})
+
+    #get train and test subjects
     train_subjects = pd.merge(train_texts, key_df2, on='text', how='left')
     test_subjects = pd.merge(test_texts, key_df2, on='text', how='left')
+
+    #filter train subjects to remove any that are in the test set
     train_subjects_filtered = train_subjects[~train_subjects['subject_id'].isin(test_subjects['subject_id'])]
     train_subjects_filtered_texts = train_subjects_filtered['text']
+
+    #keep record of those removed from training set
     train_subjects_lost = train_subjects[train_subjects['subject_id'].isin(test_subjects['subject_id'])]
     train_subjects_lost_texts = train_subjects_lost['text']
+
+    #filter discharge letters out of training set based on testing set
     train_disc_bertdf2 = train_df.to_pandas()
     train_disc_bertdf_filtered = train_disc_bertdf2[train_disc_bertdf2['text'].isin(train_subjects_filtered_texts)]
     train_disc_bertdf2 = Dataset.from_pandas(train_disc_bertdf_filtered)
+
+    #convert back to torch format
     train_disc_bertdf2.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
+
+    #return both the filtered training set and the texts of those removed from the training set
     return train_disc_bertdf2, train_subjects_lost_texts
 
 ###Cleaning
 def dfcleanconv(df):
+
+    #rename columns to align datasets
     df2 = df.rename(columns={"ab_on_disc": "label"})
     df2 = df2.rename(columns={"pt_text": "text"})
+
+    #drop any rows with missing text
     df2 = df2.dropna(subset=['text'])
+
+    #convert to dataset
     df2 = Dataset.from_pandas(df2)
+
     return df2
 
 ###Model training
-def bert_trainer(mod,epochs,opt):
+def bert_trainer(mod, epochs, opt):
 
-    #model to training mode
+    #ensure MPS being used
+    mod=mod.to(device)
     mod.train()
 
-    epochno=0
-
-    #loop over n epochs
+    #iterate over epochs
     for epoch in range(epochs):
+
+        #update message
+        print(f"\n{'='*70}")
+        print(f"Epoch {epoch + 1}/{epochs}")
+        print(f"{'='*70}")
 
         #baseline loss
         total_loss = 0
 
-        #loop over batches of size n
-        for batch in train_loader:
+        #iterate over batches
+        for batch_idx, batch in enumerate(train_loader):
 
-            #reset loss grad to 0 for this epoch
+            #reset loss gradient
             opt.zero_grad()
 
             #get input ids of this batch
@@ -82,7 +139,7 @@ def bert_trainer(mod,epochs,opt):
             #get mask tokens to ignore (e.g., padding)
             attention_mask = batch['attention_mask'].to(device)
 
-            #get actualoutcome labels
+            #get actual outcome labels
             label = batch['label'].to(device)
 
             #model predictions
@@ -90,7 +147,6 @@ def bert_trainer(mod,epochs,opt):
 
             #prediction loss
             loss = outputs.loss
-            total_loss += loss.item()
 
             #backpropagate to calc gradient
             loss.backward()
@@ -98,9 +154,15 @@ def bert_trainer(mod,epochs,opt):
             #update params
             opt.step()
 
-        #show average loss over epoch
+            #calc and show average loss for batch
+            total_loss += loss.item()
+            if (batch_idx + 1) % 100 == 0:
+                avg_loss_so_far = total_loss / (batch_idx + 1)
+                print(f"  Batch {batch_idx + 1:5d}/{len(train_loader)} | Loss: {loss.item():.4f} | Avg Loss: {avg_loss_so_far:.4f}")
+
+        #calc and show average loss for epoch
         avg_loss = total_loss / len(train_loader)
-        print(f"Epoch {epoch + 1} - Loss: {avg_loss:.4f}")
+        print(f"\nEpoch {epoch + 1} Complete - Avg Loss: {avg_loss:.4f}\n")
 
     return mod
 
@@ -145,10 +207,14 @@ def bert_predict(mod):
     all_probs = np.array(all_probs)
     all_labels = np.array(all_labels)
 
+    # create dataframe with predictions, probabilities, and labels
     perfdf = pd.DataFrame(np.column_stack((all_preds, all_probs[:, 1], all_labels)),
                           columns=['pred', 'prob', 'label'])
 
     return perfdf
+
+###############################################
+###############################################
 
 ##Seeds
 
@@ -165,10 +231,16 @@ torch.backends.cudnn.benchmark = False
 ###Other
 set_seed(123)
 
+###############################################
+###############################################
+
 ##Read in
 
-disc_df = pd.read_csv("stab_orig.csv")
-disc_subjectkey = pd.read_csv("stab_orig_key.csv")
+disc_df = pd.read_csv("pt_orig.csv")
+disc_subjectkey=pd.read_csv("pt_orig_key.csv")
+
+###############################################
+###############################################
 
 ##Preprocessing
 
@@ -180,21 +252,33 @@ tokeniser = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 discdf_tokenised = disc_bertdf.map(tokener, batched=True)
 discdf_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
+###Count truncations
+discdf_token_no = disc_bertdf.map(count_tokens_untruncated, batched=True)
+discdf_token_no = discdf_token_no.to_pandas()
+discdf_token_no = discdf_token_no[['text', 'num_tokens']]
+discdf_token_no['truncated'] = discdf_token_no['num_tokens'] > 512
+discdf_token_no.to_csv("disc_token_no.csv", index=False)
+truncation_count = discdf_token_no['truncated'].sum()
+print(truncation_count)
+
 ###Train-test split
 train_disc_bertdf, test_disc_bertdf = ttsplit(discdf_tokenised,0.2)
 
 ###Remove test patients from training set
-train_disc_bertdf, train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
+train_disc_bertdf,train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
 train_ref = train_disc_bertdf.to_pandas()
 train_ref = train_ref['text']
-train_ref.to_csv("stab_train_ref.csv", index=False)
-train_removed.to_csv("stab_train_removed.csv", index=False)
+train_ref.to_csv("train_ref.csv", index=False)
+train_removed.to_csv("train_removed.csv", index=False)
 
 ###Data loaders
-train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_disc_bertdf, batch_size=16)
+train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True,num_workers=6)
+test_loader = DataLoader(test_disc_bertdf, batch_size=16,num_workers=6)
 
-##BERT prep
+###############################################
+###############################################
+
+##DistilBERT prep
 
 ###Set to run on MPS if mac, otherwise run on CPU
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -206,6 +290,9 @@ discmodel.to(device)
 ###Set learning rate on ADAMW optimiser
 disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
 
+###############################################
+###############################################
+
 ##Model training and predictions
 
 ###Training
@@ -216,80 +303,45 @@ preds_perf_df = bert_predict(discmodel)
 test_disc_bertdf2 = test_disc_bertdf
 test_disc_bertdf2.reset_format()
 preds_perf_df['text'] = test_disc_bertdf2['text']
-preds_perf_df.to_csv("bert_preds_stab.csv", index=False)
+preds_perf_df.to_csv("bert_preds.csv", index=False)
+
+###############################################
+###############################################
 
 ##Save model and tokeniser
 
-savdirec = "./pt_disc_dbert_stab"
+savdirec = "./pt_disc_dbert"
 discmodel.save_pretrained(savdirec)
 tokeniser.save_pretrained(savdirec)
 
-##ACCESS Read in
-
-disc_df = pd.read_csv("stab_access.csv")
-disc_subjectkey = pd.read_csv("stab_access_key.csv")
-
-##ACCESS Preprocessing
-
-###ACCESS Clean and convert to Pytorch dataset
-disc_df = disc_df.rename(columns={"Access": "label"})
-disc_bertdf = dfcleanconv(disc_df)
-
-###ACCESS Tokenise dataset
-tokeniser = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-discdf_tokenised = disc_bertdf.map(tokener, batched=True)
-discdf_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
-
-###ACCESS Train-test split
-train_disc_bertdf, test_disc_bertdf = ttsplit(discdf_tokenised,0.2)
-
-###Remove test patients from training set
-train_disc_bertdf, train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
-train_ref = train_disc_bertdf.to_pandas()
-train_ref = train_ref['text']
-train_ref.to_csv("ac_stab_train_ref.csv", index=False)
-train_removed.to_csv("ac_stab_train_removed.csv", index=False)
-
-###ACCESS Data loaders
-train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_disc_bertdf, batch_size=16)
-
-##ACCESS BERT prep
-
-###ACCESS Set to run on MPS if mac, otherwise run on CPU
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-
-###ACCESS Load-in pre-trained DistilBERT model and assign to MPS or CPU
-discmodel = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=2)
-discmodel.to(device)
-
-###ACCESS Set learning rate on ADAMW optimiser
-disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
-
-##ACCESS Model training and predictions
-
-###ACCESS Training
-discmodel = bert_trainer(discmodel,3,disc_optimiser)
-
-###ACCESS Predictions
-preds_perf_df = bert_predict(discmodel)
-test_disc_bertdf2 = test_disc_bertdf
-test_disc_bertdf2.reset_format()
-preds_perf_df['text'] = test_disc_bertdf2['text']
-preds_perf_df.to_csv("bert_preds_stab_ac.csv", index=False)
-
-##ACCESS Save model and tokeniser
-
-savdirec = "./pt_disc_dbert_stab_ac"
-discmodel.save_pretrained(savdirec)
-tokeniser.save_pretrained(savdirec)
+###############################################
+###############################################
 
 ##Record time taken to run the script
-
 end_time = datetime.now()
 time_taken = end_time - start_time
 time_taken = time_taken.total_seconds()
-time_df1 = pd.DataFrame({"Script": ["BERT_stability.py"], "Time (secs)": [time_taken]})
+time_df1 = pd.DataFrame({"Script": ["BERT_discharges.py"], "Time (secs)": [time_taken]})
 time_df = pd.read_csv("script_times.csv")
 time_df = pd.concat([time_df, time_df1], ignore_index=True)
 time_df.to_csv("script_times.csv", index=False)
+
+##Check time taken to run a single prediction on longest text in the test set
+discmodel = DistilBertForSequenceClassification.from_pretrained("./pt_disc_dbert", num_labels=2)
+discmodel.to(device)
+sample_row = (
+    test_disc_bertdf
+    .map(lambda x: {"input_len": len(x["input_ids"])})
+    .sort("input_len", reverse=True)
+    .select(range(1))
+    .remove_columns("input_len")
+)
+sample_row.set_format(type="torch", columns=["input_ids", "attention_mask", "label"])
+test_loader = DataLoader(sample_row, batch_size=1)
+predict_start_time = datetime.now()
+test_model = bert_predict(discmodel)
+predict_end_time = datetime.now()
+time_taken = predict_end_time - predict_start_time
+print("Time taken for a single prediction (seconds): ", time_taken.total_seconds())
+time_df2 = pd.DataFrame({"Script": ["Overall model single prediction"], "Time (secs)": [time_taken.total_seconds()]})
+time_df2.to_csv("overall_single_prediction.csv", index=False)

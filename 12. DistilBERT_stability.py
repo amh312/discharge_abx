@@ -1,20 +1,39 @@
-#BERT discharge sime sensitivity analysis
+#BERT discharge stability analysis
+
+###############################################
+###############################################
 
 ##Packages
 
+###transformers v5.4.0
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, set_seed
-import torch
+
+###datasets v4.8.4
 from datasets import Dataset
+
+###pandas v3.0.1
 import pandas as pd
+
+###numpy v1.26.4
 import numpy as np
+
+###torch v2.11.0
+import torch
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
+
 import random
 from datetime import datetime
+
+###############################################
+###############################################
 
 ##Initialise script timer
 
 start_time = datetime.now()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -24,37 +43,68 @@ def tokener(examples):
 
 ###Train-test split
 def ttsplit(token_data,testsize):
+
+    #split index
     split_disc_bertdf = token_data.train_test_split(test_size=testsize)
+
+    #split dfs by index
     traindf = split_disc_bertdf['train']
     testdf = split_disc_bertdf['test']
+
     return traindf, testdf
 
 ###Removal of pts in the test set from the training set
 def remove_testpatients(train_df, test_df,key_df):
+
+    #convert to dfs
     train_disc_bertdf2 = train_df.to_pandas()
     test_disc_bertdf2 = test_df.to_pandas()
+
+    #get text columns
     train_texts = train_disc_bertdf2['text']
     test_texts = test_disc_bertdf2['text']
+
+    #make key df
     key_df2 = key_df.rename(columns={"pt_text": "text"})
+
+    #get train and test subjects
     train_subjects = pd.merge(train_texts, key_df2, on='text', how='left')
     test_subjects = pd.merge(test_texts, key_df2, on='text', how='left')
+
+    #filter train subjects to remove any that are in the test set
     train_subjects_filtered = train_subjects[~train_subjects['subject_id'].isin(test_subjects['subject_id'])]
     train_subjects_filtered_texts = train_subjects_filtered['text']
+
+    #keep record of train subjects that are lost
     train_subjects_lost = train_subjects[train_subjects['subject_id'].isin(test_subjects['subject_id'])]
     train_subjects_lost_texts = train_subjects_lost['text']
+
+    #convert to df
     train_disc_bertdf2 = train_df.to_pandas()
+
+    #filter out texts for train subjects in test set
     train_disc_bertdf_filtered = train_disc_bertdf2[train_disc_bertdf2['text'].isin(train_subjects_filtered_texts)]
+
+    #convert to dataset
     train_disc_bertdf2 = Dataset.from_pandas(train_disc_bertdf_filtered)
     train_disc_bertdf2.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
+
+    #return filtered train dataset and removed test subjects
     return train_disc_bertdf2, train_subjects_lost_texts
 
 ###Cleaning
 def dfcleanconv(df):
+
+    #rename columns
     df2 = df.rename(columns={"ab_on_disc": "label"})
-    df2 = df2.rename(columns={"Access": "label"})
     df2 = df2.rename(columns={"pt_text": "text"})
+
+    #drop rows with missing texts
     df2 = df2.dropna(subset=['text'])
+
+    #convert to dataset
     df2 = Dataset.from_pandas(df2)
+
     return df2
 
 ###Model training
@@ -151,6 +201,9 @@ def bert_predict(mod):
 
     return perfdf
 
+###############################################
+###############################################
+
 ##Seeds
 
 ###Random
@@ -166,39 +219,43 @@ torch.backends.cudnn.benchmark = False
 ###Other
 set_seed(123)
 
+###############################################
+###############################################
+
 ##Read in
 
-pt_2010 = pd.read_csv("pt_2010.csv")
-pt_2019 = pd.read_csv("pt_2019.csv")
-disc_subjectkey=pd.read_csv("pt_timekey.csv")
+disc_df = pd.read_csv("stab_orig.csv")
+disc_subjectkey = pd.read_csv("stab_orig_key.csv")
+
+###############################################
+###############################################
 
 ##Preprocessing
 
-###Clean and convert to Pytorch datasets
-pt_2010 = dfcleanconv(pt_2010)
-pt_2019 = dfcleanconv(pt_2019)
+###Clean and convert to Pytorch dataset
+disc_bertdf = dfcleanconv(disc_df)
 
-###Tokenise datasets
+###Tokenise dataset
 tokeniser = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-pt_2010_tokenised = pt_2010.map(tokener, batched=True)
-pt_2010_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
-pt_2019_tokenised = pt_2019.map(tokener, batched=True)
-pt_2019_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
+discdf_tokenised = disc_bertdf.map(tokener, batched=True)
+discdf_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
-###Train-test split based on time period
-train_disc_bertdf = pt_2010_tokenised
-test_disc_bertdf = pt_2019_tokenised
+###Train-test split
+train_disc_bertdf, test_disc_bertdf = ttsplit(discdf_tokenised,0.2)
 
 ###Remove test patients from training set
-train_disc_bertdf,train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
+train_disc_bertdf, train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
 train_ref = train_disc_bertdf.to_pandas()
 train_ref = train_ref['text']
-train_ref.to_csv("train_ref.csv", index=False)
-train_removed.to_csv("train_removed.csv", index=False)
+train_ref.to_csv("stab_train_ref.csv", index=False)
+train_removed.to_csv("stab_train_removed.csv", index=False)
 
 ###Data loaders
 train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True)
 test_loader = DataLoader(test_disc_bertdf, batch_size=16)
+
+###############################################
+###############################################
 
 ##BERT prep
 
@@ -212,6 +269,9 @@ discmodel.to(device)
 ###Set learning rate on ADAMW optimiser
 disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
 
+###############################################
+###############################################
+
 ##Model training and predictions
 
 ###Training
@@ -222,47 +282,55 @@ preds_perf_df = bert_predict(discmodel)
 test_disc_bertdf2 = test_disc_bertdf
 test_disc_bertdf2.reset_format()
 preds_perf_df['text'] = test_disc_bertdf2['text']
-preds_perf_df.to_csv("bert_preds_timesens.csv", index=False)
+preds_perf_df.to_csv("bert_preds_stab.csv", index=False)
+
+###############################################
+###############################################
 
 ##Save model and tokeniser
 
-savdirec = "./pt_disc_dbert_timesens"
+savdirec = "./pt_disc_dbert_stab"
 discmodel.save_pretrained(savdirec)
 tokeniser.save_pretrained(savdirec)
 
+###############################################
+###############################################
+
 ##ACCESS Read in
 
-pt_2010 = pd.read_csv("ac_2010.csv")
-pt_2019 = pd.read_csv("ac_2019.csv")
-disc_subjectkey=pd.read_csv("ac_timekey.csv")
+disc_df = pd.read_csv("stab_access.csv")
+disc_subjectkey = pd.read_csv("stab_access_key.csv")
+
+###############################################
+###############################################
 
 ##ACCESS Preprocessing
 
-###ACCESS Clean and convert to Pytorch datasets
-pt_2010 = dfcleanconv(pt_2010)
-pt_2019 = dfcleanconv(pt_2019)
+###ACCESS Clean and convert to Pytorch dataset
+disc_df = disc_df.rename(columns={"Access": "label"})
+disc_bertdf = dfcleanconv(disc_df)
 
-###ACCESS Tokenise datasets
+###ACCESS Tokenise dataset
 tokeniser = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-pt_2010_tokenised = pt_2010.map(tokener, batched=True)
-pt_2010_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
-pt_2019_tokenised = pt_2019.map(tokener, batched=True)
-pt_2019_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
+discdf_tokenised = disc_bertdf.map(tokener, batched=True)
+discdf_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
-###ACCESS Train-test split based on time period
-train_disc_bertdf = pt_2010_tokenised
-test_disc_bertdf = pt_2019_tokenised
+###ACCESS Train-test split
+train_disc_bertdf, test_disc_bertdf = ttsplit(discdf_tokenised,0.2)
 
 ###Remove test patients from training set
-train_disc_bertdf,train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
+train_disc_bertdf, train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
 train_ref = train_disc_bertdf.to_pandas()
 train_ref = train_ref['text']
-train_ref.to_csv("train_ref_timesens.csv", index=False)
-train_removed.to_csv("train_removed_timesens.csv", index=False)
+train_ref.to_csv("ac_stab_train_ref.csv", index=False)
+train_removed.to_csv("ac_stab_train_removed.csv", index=False)
 
 ###ACCESS Data loaders
 train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True)
 test_loader = DataLoader(test_disc_bertdf, batch_size=16)
+
+###############################################
+###############################################
 
 ##ACCESS BERT prep
 
@@ -276,6 +344,9 @@ discmodel.to(device)
 ###ACCESS Set learning rate on ADAMW optimiser
 disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
 
+###############################################
+###############################################
+
 ##ACCESS Model training and predictions
 
 ###ACCESS Training
@@ -286,20 +357,26 @@ preds_perf_df = bert_predict(discmodel)
 test_disc_bertdf2 = test_disc_bertdf
 test_disc_bertdf2.reset_format()
 preds_perf_df['text'] = test_disc_bertdf2['text']
-preds_perf_df.to_csv("bert_preds_timesens_ac.csv", index=False)
+preds_perf_df.to_csv("bert_preds_stab_ac.csv", index=False)
+
+###############################################
+###############################################
 
 ##ACCESS Save model and tokeniser
 
-savdirec = "./pt_disc_dbert_timesens_ac"
+savdirec = "./pt_disc_dbert_stab_ac"
 discmodel.save_pretrained(savdirec)
 tokeniser.save_pretrained(savdirec)
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 
 end_time = datetime.now()
 time_taken = end_time - start_time
 time_taken = time_taken.total_seconds()
-time_df1 = pd.DataFrame({"Script": ["BERT_timesens.py"], "Time (secs)": [time_taken]})
+time_df1 = pd.DataFrame({"Script": ["BERT_stability.py"], "Time (secs)": [time_taken]})
 time_df = pd.read_csv("script_times.csv")
 time_df = pd.concat([time_df, time_df1], ignore_index=True)
 time_df.to_csv("script_times.csv", index=False)

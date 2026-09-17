@@ -1,4 +1,4 @@
-#BERT discharge antibiotic prediction (Access model)
+#BERT discharge antibiotic prediction - sliding window sensitivity analysis
 
 ##Packages
 
@@ -18,9 +18,32 @@ start_time = datetime.now()
 
 ##Functions
 
-###Tokeniser function for mapping
+###Tokeniser function for mapping (whole-document, used only for truncation counting)
 def tokener(examples):
     return tokeniser(examples["text"], padding="max_length", truncation=True)
+
+###Truncation count
+def count_tokens_untruncated(examples):
+    return {'num_tokens': [len(ids) for ids in tokeniser(examples['text'], truncation=False)['input_ids']]}
+
+###Chunking tokeniser - splits documents > 512 tokens into overlapping windows
+def chunk_tokener(examples, stride=64, max_length=512):
+    tokenised = tokeniser(
+        examples["text"],
+        truncation=True,
+        max_length=max_length,
+        stride=stride,
+        return_overflowing_tokens=True,
+        padding="max_length",
+    )
+    sample_map = tokenised.pop("overflow_to_sample_mapping")
+    return {
+        "input_ids": tokenised["input_ids"],
+        "attention_mask": tokenised["attention_mask"],
+        "label": [examples["label"][i] for i in sample_map],
+        "doc_id": [examples["doc_id"][i] for i in sample_map],
+        "text": [examples["text"][i] for i in sample_map],
+    }
 
 ###Train-test split
 def ttsplit(token_data,testsize):
@@ -45,12 +68,11 @@ def remove_testpatients(train_df, test_df,key_df):
     train_disc_bertdf2 = train_df.to_pandas()
     train_disc_bertdf_filtered = train_disc_bertdf2[train_disc_bertdf2['text'].isin(train_subjects_filtered_texts)]
     train_disc_bertdf2 = Dataset.from_pandas(train_disc_bertdf_filtered)
-    train_disc_bertdf2.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
     return train_disc_bertdf2, train_subjects_lost_texts
 
 ###Cleaning
 def dfcleanconv(df):
-    df2 = df.rename(columns={"access_only": "label"})
+    df2 = df.rename(columns={"ab_on_disc": "label"})
     df2 = df2.rename(columns={"pt_text": "text"})
     df2 = df2.dropna(subset=['text'])
     df2 = Dataset.from_pandas(df2)
@@ -113,8 +135,8 @@ def bert_trainer(mod, epochs, opt):
 
     return mod
 
-###Model testing
-def bert_predict(mod):
+###Model testing - chunk level (one row per chunk, not per document)
+def bert_predict(mod, loader):
     # model to evaluation mode
     mod.eval()
 
@@ -126,7 +148,7 @@ def bert_predict(mod):
     # turn off gradient tracking
     with torch.no_grad():
         # loop over batches
-        for batch in test_loader:
+        for batch in loader:
             # get input ids
             input_ids = batch['input_ids'].to(device)
 
@@ -159,6 +181,17 @@ def bert_predict(mod):
 
     return perfdf
 
+###Aggregate chunk-level predictions to document level using max probability
+def aggregate_max_prob(chunk_perf_df, doc_order, doc_text_lookup):
+    chunk_perf_df = chunk_perf_df.copy()
+    idx = chunk_perf_df.groupby('doc_id')['prob'].idxmax()
+    agg_df = chunk_perf_df.loc[idx].set_index('doc_id')
+    agg_df = agg_df.reindex(doc_order)
+    agg_df['text'] = [doc_text_lookup[d] for d in doc_order]
+    agg_df = agg_df.reset_index(drop=True)
+    agg_df = agg_df[['pred', 'prob', 'label', 'text']]
+    return agg_df
+
 ##Seeds
 
 ###Random
@@ -176,35 +209,76 @@ set_seed(123)
 
 ##Read in
 
-disc_df = pd.read_csv("pt_access_only.csv")
-disc_subjectkey = pd.read_csv("pt_access_only_key.csv")
+disc_df = pd.read_csv("pt_orig.csv")
+disc_subjectkey=pd.read_csv("pt_orig_key.csv")
 
 ##Preprocessing
 
 ###Clean and convert to Pytorch dataset
 disc_bertdf = dfcleanconv(disc_df)
 
-###Tokenise dataset
+###Assign a stable per-document id before any splitting/chunking so chunks
+###can always be traced back to their parent document.
+disc_bertdf = disc_bertdf.add_column("doc_id", list(range(len(disc_bertdf))))
+
+###Tokeniser
 tokeniser = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-discdf_tokenised = disc_bertdf.map(tokener, batched=True)
-discdf_tokenised.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
-###Train-test split
-train_disc_bertdf, test_disc_bertdf = ttsplit(discdf_tokenised,0.2)
+###Count truncations (document level, pre-split, for reporting only)
+discdf_token_no = disc_bertdf.map(count_tokens_untruncated, batched=True)
+discdf_token_no = discdf_token_no.to_pandas()
+discdf_token_no = discdf_token_no[['text', 'num_tokens']]
+discdf_token_no['truncated'] = discdf_token_no['num_tokens'] > 512
+discdf_token_no.to_csv("disc_token_no.csv", index=False)
+truncation_count = discdf_token_no['truncated'].sum()
+print(truncation_count)
 
-###Remove test patients from training set
-train_disc_bertdf, train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
+###Train-test split - performed on whole (unchunked) documents to savoid data leakage
+train_disc_bertdf, test_disc_bertdf = ttsplit(disc_bertdf,0.2)
+
+###Remove test patients from training set (still at document level)
+train_disc_bertdf,train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
 train_ref = train_disc_bertdf.to_pandas()
 train_ref = train_ref['text']
-train_ref.to_csv("ac_train_ref.csv", index=False)
-train_removed.to_csv("ac_train_removed.csv", index=False)
+train_ref.to_csv("train_ref.csv", index=False)
+train_removed.to_csv("train_removed.csv", index=False)
+
+###Document-level order/labels of the test set, used later to reassemble
+test_doc_order = test_disc_bertdf['doc_id']
+test_doc_text_lookup = dict(zip(test_disc_bertdf['doc_id'], test_disc_bertdf['text']))
+
+###Chunk documents into overlapping 512-token windows
+train_disc_bertdf_chunked = train_disc_bertdf.map(
+    chunk_tokener, batched=True, remove_columns=train_disc_bertdf.column_names
+)
+test_disc_bertdf_chunked = test_disc_bertdf.map(
+    chunk_tokener, batched=True, remove_columns=test_disc_bertdf.column_names
+)
+
+###Keep a record of which doc_id each test chunk belongs to
+test_chunk_doc_ids = list(test_disc_bertdf_chunked['doc_id'])
+
+###Confirm no document's chunks leaked across train/test boundary
+train_chunk_doc_ids = set(train_disc_bertdf_chunked['doc_id'])
+test_chunk_doc_ids_set = set(test_chunk_doc_ids)
+overlap_doc_ids = train_chunk_doc_ids & test_chunk_doc_ids_set
+if overlap_doc_ids:
+    raise ValueError(
+        f"Data leakage detected: {len(overlap_doc_ids)} doc_id(s) present in "
+        f"both train and test chunk sets: {sorted(overlap_doc_ids)}"
+    )
+print(f"Leakage check passed: no doc_id overlap between train ({len(train_chunk_doc_ids)} docs) "
+      f"and test ({len(test_chunk_doc_ids_set)} docs) chunk sets.")
+
+###Restrict tensor columns used by the model/data loaders
+train_disc_bertdf_chunked.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
+test_disc_bertdf_chunked.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
 ###Data loaders
-train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True,num_workers=6)
-test_loader = DataLoader(test_disc_bertdf, batch_size=16,num_workers=6)
-torch.set_num_threads(10)
+train_loader = DataLoader(train_disc_bertdf_chunked, batch_size=16, shuffle=True,num_workers=6)
+test_loader = DataLoader(test_disc_bertdf_chunked, batch_size=16,num_workers=6)
 
-##BERT prep
+##DistilBERT prep
 
 ###Set to run on MPS if mac, otherwise run on CPU
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -218,19 +292,20 @@ disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
 
 ##Model training and predictions
 
-###Training
+###Training (each chunk is treated as an independent training example inheriting parent doc label)
 discmodel = bert_trainer(discmodel,3,disc_optimiser)
 
-###Predictions
-preds_perf_df = bert_predict(discmodel)
-test_disc_bertdf2 = test_disc_bertdf
-test_disc_bertdf2.reset_format()
-preds_perf_df['text'] = test_disc_bertdf2['text']
-preds_perf_df.to_csv("access_bert_preds.csv", index=False)
+###Chunk-level predictions
+chunk_preds_perf_df = bert_predict(discmodel, test_loader)
+chunk_preds_perf_df['doc_id'] = test_chunk_doc_ids
+
+###Aggregate chunks back to one row per document (max-probability rule), same order as original test set
+preds_perf_df = aggregate_max_prob(chunk_preds_perf_df, test_doc_order, test_doc_text_lookup)
+preds_perf_df.to_csv("bert_preds_chunked.csv", index=False)
 
 ##Save model and tokeniser
 
-savdirec = "./pt_access_disc_dbert"
+savdirec = "./pt_disc_dbert_chunked"
 discmodel.save_pretrained(savdirec)
 tokeniser.save_pretrained(savdirec)
 
@@ -239,27 +314,27 @@ tokeniser.save_pretrained(savdirec)
 end_time = datetime.now()
 time_taken = end_time - start_time
 time_taken = time_taken.total_seconds()
-time_df1 = pd.DataFrame({"Script": ["BERT_access.py"], "Time (secs)": [time_taken]})
+time_df1 = pd.DataFrame({"Script": ["BERT_discharges_chunked.py"], "Time (secs)": [time_taken]})
 time_df = pd.read_csv("script_times.csv")
 time_df = pd.concat([time_df, time_df1], ignore_index=True)
 time_df.to_csv("script_times.csv", index=False)
 
-###Check time taken to run a single prediction
-discmodel = DistilBertForSequenceClassification.from_pretrained("./pt_access_disc_dbert", num_labels=2)
+###Check time taken to run a single prediction on the longest chunk in the test set
+discmodel = DistilBertForSequenceClassification.from_pretrained("./pt_disc_dbert_chunked", num_labels=2)
 discmodel.to(device)
 sample_row = (
-    test_disc_bertdf
+    test_disc_bertdf_chunked
     .map(lambda x: {"input_len": len(x["input_ids"])})
     .sort("input_len", reverse=True)
     .select(range(1))
     .remove_columns("input_len")
 )
 sample_row.set_format(type="torch", columns=["input_ids", "attention_mask", "label"])
-test_loader = DataLoader(sample_row, batch_size=1)
+sample_loader = DataLoader(sample_row, batch_size=1)
 predict_start_time = datetime.now()
-test_model = bert_predict(discmodel)
+test_model = bert_predict(discmodel, sample_loader)
 predict_end_time = datetime.now()
 time_taken = predict_end_time - predict_start_time
 print("Time taken for a single prediction (seconds): ", time_taken.total_seconds())
-time_df2 = pd.DataFrame({"Script": ["Access model single prediction"], "Time (secs)": [time_taken.total_seconds()]})
-time_df2.to_csv("access_single_prediction.csv", index=False)
+time_df2 = pd.DataFrame({"Script": ["Overall model single prediction (chunked)"], "Time (secs)": [time_taken.total_seconds()]})
+time_df2.to_csv("overall_single_prediction_chunked.csv", index=False)
