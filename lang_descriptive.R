@@ -33,7 +33,7 @@ select_text <- function(
 
 ###Compile characteristics table
 char_table <- function(df, col_name, prop) {
-  char_count <- function(df, charac, patient = TRUE) {
+  char_count <- function(df, charac, patient = TRUE, yeargroup = FALSE) {
     if (patient) {
       df %>%
         distinct(subject_id, .keep_all = T) %>%
@@ -45,6 +45,22 @@ char_table <- function(df, col_name, prop) {
         rename(Group = charac) %>%
         mutate(`n(%)` = glue("{no}({round((no/sum(no)*100),1)})")) %>%
         select(-no)
+    } else if (yeargroup) {
+      df %>%
+        count(!!sym(charac)) %>%
+        arrange(desc(!!sym(charac))) %>%
+        mutate(Characteristic = glue("{charac}*")) %>%
+        rename(no = "n") %>%
+        relocate(Characteristic, .before = charac) %>%
+        rename(Group = charac) %>%
+        mutate(`n(%)` = glue("{no}({round((no/sum(no)*100),1)})")) %>%
+        select(-no) |>
+        filter(
+          Group == "2008 - 2010" |
+            Group == "2011 - 2013" |
+            Group == "2014 - 2016" |
+            Group == "2017 - 2019"
+        )
     } else {
       df %>%
         count(!!sym(charac)) %>%
@@ -85,7 +101,7 @@ char_table <- function(df, col_name, prop) {
       char_count(df, "English spoken"),
       char_count(df, "Marital status"),
       char_count(df, "Insurance", F),
-      char_count(df, "Admission period", F),
+      char_count(df, "Discharge period", F, T),
       char_count(df, "Discharge location", F),
       char_count(df, "Discharged on ≥1 antibiotic", F),
       char_count(df, "Discharged on ≥1 Access antibiotic", F),
@@ -146,6 +162,116 @@ discharge_meds <- function(df, new_col) {
         TRUE ~ !!new_col
       )
     )
+}
+
+###Year joining
+yearjoin <- function(df, timekey) {
+  df %>%
+    mutate(chart_year = lubridate::year(charttime)) |>
+    left_join(timekey, by = "subject_id") |>
+    mutate(year_diff = chart_year - anchor_year) |>
+    mutate(
+      new_anchor_year_group = case_when(
+        year_diff == -2 & grepl("2008", anchor_year_group) ~ "2006 - 2008",
+        year_diff == -1 & grepl("2008", anchor_year_group) ~ "2007 - 2009",
+        year_diff == 0 & grepl("2008", anchor_year_group) ~ "2008 - 2010",
+        year_diff == 1 & grepl("2008", anchor_year_group) ~ "2009 - 2011",
+        year_diff == 2 & grepl("2008", anchor_year_group) ~ "2010 - 2012",
+        year_diff == 3 & grepl("2008", anchor_year_group) ~ "2011 - 2013",
+        year_diff == 4 & grepl("2008", anchor_year_group) ~ "2012 - 2014",
+        year_diff == 5 & grepl("2008", anchor_year_group) ~ "2013 - 2015",
+        year_diff == 6 & grepl("2008", anchor_year_group) ~ "2014 - 2016",
+        year_diff == 7 & grepl("2008", anchor_year_group) ~ "2015 - 2017",
+        year_diff == 8 & grepl("2008", anchor_year_group) ~ "2016 - 2018",
+        year_diff == 9 & grepl("2008", anchor_year_group) ~ "2017 - 2019",
+        year_diff == 10 & grepl("2008", anchor_year_group) ~ "2018 - 2020",
+        year_diff == 11 & grepl("2008", anchor_year_group) ~ "2019 - 2021",
+        year_diff == 12 & grepl("2008", anchor_year_group) ~ "2020 - 2022",
+        year_diff == 13 & grepl("2008", anchor_year_group) ~ "2021 - 2023",
+        year_diff == 14 & grepl("2008", anchor_year_group) ~ "2022 - 2024",
+        year_diff == -5 & grepl("2011", anchor_year_group) ~ "2006 - 2008",
+        year_diff == -4 & grepl("2011", anchor_year_group) ~ "2007 - 2009",
+        year_diff == -3 & grepl("2011", anchor_year_group) ~ "2008 - 2010",
+        year_diff == -2 & grepl("2011", anchor_year_group) ~ "2009 - 2011",
+        year_diff == -1 & grepl("2011", anchor_year_group) ~ "2010 - 2012",
+        year_diff == 0 & grepl("2011", anchor_year_group) ~ "2011 - 2013",
+        year_diff == 1 & grepl("2011", anchor_year_group) ~ "2012 - 2014",
+        year_diff == 2 & grepl("2011", anchor_year_group) ~ "2013 - 2015",
+        year_diff == 3 & grepl("2011", anchor_year_group) ~ "2014 - 2016",
+        year_diff == 4 & grepl("2011", anchor_year_group) ~ "2015 - 2017",
+        year_diff == 5 & grepl("2011", anchor_year_group) ~ "2016 - 2018",
+        year_diff == 6 & grepl("2011", anchor_year_group) ~ "2017 - 2019",
+        year_diff == 7 & grepl("2011", anchor_year_group) ~ "2018 - 2020",
+        year_diff == 8 & grepl("2011", anchor_year_group) ~ "2019 - 2021",
+        year_diff == 9 & grepl("2011", anchor_year_group) ~ "2020 - 2022",
+        year_diff == 10 & grepl("2011", anchor_year_group) ~ "2021 - 2023",
+        year_diff == 11 & grepl("2011", anchor_year_group) ~ "2022 - 2024",
+        year_diff == -8 & grepl("2014", anchor_year_group) ~ "2006 - 2008",
+        year_diff == -7 & grepl("2014", anchor_year_group) ~ "2007 - 2009",
+        year_diff == -6 & grepl("2014", anchor_year_group) ~ "2008 - 2010",
+        year_diff == -5 & grepl("2014", anchor_year_group) ~ "2009 - 2011",
+        year_diff == -4 & grepl("2014", anchor_year_group) ~ "2010 - 2012",
+        year_diff == -3 & grepl("2014", anchor_year_group) ~ "2011 - 2013",
+        year_diff == -2 & grepl("2014", anchor_year_group) ~ "2012 - 2014",
+        year_diff == -1 & grepl("2014", anchor_year_group) ~ "2013 - 2015",
+        year_diff == 0 & grepl("2014", anchor_year_group) ~ "2014 - 2016",
+        year_diff == 1 & grepl("2014", anchor_year_group) ~ "2015 - 2017",
+        year_diff == 2 & grepl("2014", anchor_year_group) ~ "2016 - 2018",
+        year_diff == 3 & grepl("2014", anchor_year_group) ~ "2017 - 2019",
+        year_diff == 4 & grepl("2014", anchor_year_group) ~ "2018 - 2020",
+        year_diff == 5 & grepl("2014", anchor_year_group) ~ "2019 - 2021",
+        year_diff == 6 & grepl("2014", anchor_year_group) ~ "2020 - 2022",
+        year_diff == 7 & grepl("2014", anchor_year_group) ~ "2021 - 2023",
+        year_diff == 8 & grepl("2014", anchor_year_group) ~ "2022 - 2024",
+        year_diff == -11 & grepl("2017", anchor_year_group) ~ "2006 - 2008",
+        year_diff == -10 & grepl("2017", anchor_year_group) ~ "2007 - 2009",
+        year_diff == -9 & grepl("2017", anchor_year_group) ~ "2008 - 2010",
+        year_diff == -8 & grepl("2017", anchor_year_group) ~ "2009 - 2011",
+        year_diff == -7 & grepl("2017", anchor_year_group) ~ "2010 - 2012",
+        year_diff == -6 & grepl("2017", anchor_year_group) ~ "2011 - 2013",
+        year_diff == -5 & grepl("2017", anchor_year_group) ~ "2012 - 2014",
+        year_diff == -4 & grepl("2017", anchor_year_group) ~ "2013 - 2015",
+        year_diff == -3 & grepl("2017", anchor_year_group) ~ "2014 - 2016",
+        year_diff == -2 & grepl("2017", anchor_year_group) ~ "2015 - 2017",
+        year_diff == -1 & grepl("2017", anchor_year_group) ~ "2016 - 2018",
+        year_diff == 0 & grepl("2017", anchor_year_group) ~ "2017 - 2019",
+        year_diff == 1 & grepl("2017", anchor_year_group) ~ "2018 - 2020",
+        year_diff == 2 & grepl("2017", anchor_year_group) ~ "2019 - 2021",
+        year_diff == 3 & grepl("2017", anchor_year_group) ~ "2020 - 2022",
+        year_diff == 4 & grepl("2017", anchor_year_group) ~ "2021 - 2023",
+        year_diff == 5 & grepl("2017", anchor_year_group) ~ "2022 - 2024",
+        year_diff == -14 & grepl("2020", anchor_year_group) ~ "2006 - 2008",
+        year_diff == -13 & grepl("2020", anchor_year_group) ~ "2007 - 2009",
+        year_diff == -12 & grepl("2020", anchor_year_group) ~ "2008 - 2010",
+        year_diff == -11 & grepl("2020", anchor_year_group) ~ "2009 - 2011",
+        year_diff == -10 & grepl("2020", anchor_year_group) ~ "2010 - 2012",
+        year_diff == -9 & grepl("2020", anchor_year_group) ~ "2011 - 2013",
+        year_diff == -8 & grepl("2020", anchor_year_group) ~ "2012 - 2014",
+        year_diff == -7 & grepl("2020", anchor_year_group) ~ "2013 - 2015",
+        year_diff == -6 & grepl("2020", anchor_year_group) ~ "2014 - 2016",
+        year_diff == -5 & grepl("2020", anchor_year_group) ~ "2015 - 2017",
+        year_diff == -4 & grepl("2020", anchor_year_group) ~ "2016 - 2018",
+        year_diff == -3 & grepl("2020", anchor_year_group) ~ "2017 - 2019",
+        year_diff == -2 & grepl("2020", anchor_year_group) ~ "2018 - 2020",
+        year_diff == -1 & grepl("2020", anchor_year_group) ~ "2019 - 2021",
+        year_diff == 0 & grepl("2020", anchor_year_group) ~ "2020 - 2022",
+        year_diff == 1 & grepl("2020", anchor_year_group) ~ "2021 - 2023",
+        year_diff == 2 & grepl("2020", anchor_year_group) ~ "2022 - 2024",
+        TRUE ~ NA
+      )
+    ) |>
+    mutate(anchor_year_group = new_anchor_year_group) |>
+    select(-c(new_anchor_year_group, anchor_year, year_diff, chart_year))
+}
+
+###Joining age groups
+agejoin <- function(df, timekey) {
+  df %>%
+    mutate(chart_year = lubridate::year(charttime)) |>
+    left_join(timekey, by = "subject_id") |>
+    mutate(year_diff = chart_year - anchor_year) |>
+    mutate(anchor_age = anchor_age + year_diff) |>
+    select(-c(anchor_year, year_diff, chart_year))
 }
 
 ##Read-in
@@ -314,28 +440,40 @@ hadm_key <- hadm %>%
     )
   )
 
-
 pt_key <- pt %>%
-  select(subject_id, gender, anchor_age, anchor_year_group) %>%
+  select(subject_id, gender) %>%
+  rename(
+    Gender = "gender"
+  )
+
+age_key <- pt %>%
+  select(subject_id, anchor_age, anchor_year)
+
+discharge2 <- discharge2 %>%
+  left_join(hadm_key, by = "hadm_id") %>%
+  left_join(pt_key, by = "subject_id") |>
+  agejoin(age_key)
+
+time_key <- pt %>% select(subject_id, anchor_year_group, anchor_year)
+discharge2 <- discharge2 |> yearjoin(time_key)
+
+discharge2 <- discharge2 |>
   mutate(
     anchor_age = glue("{floor(anchor_age/10)*10}-{(floor(anchor_age/10)*10)+9}")
   ) %>%
   mutate(
     anchor_age = case_when(
       grepl("19", anchor_age) ~ "≤19",
-      grepl("90", anchor_age) ~ "≥90",
+      grepl("90", anchor_age) | grepl("100", anchor_age) ~ "≥90",
       TRUE ~ anchor_age
     )
-  ) %>%
-  rename(
-    Gender = "gender",
-    `Age group` = "anchor_age",
-    `Admission period` = "anchor_year_group"
   )
 
-discharge2 <- discharge2 %>%
-  left_join(hadm_key, by = "hadm_id") %>%
-  left_join(pt_key, by = "subject_id")
+discharge2 <- discharge2 |>
+  rename(
+    `Discharge period` = "anchor_year_group",
+    `Age group` = "anchor_age"
+  )
 
 ###Update discharge_interim
 write_csv(discharge2, "discharge_interim.csv")
@@ -396,10 +534,10 @@ write_csv(chartab, "characteristics_table.csv")
 ##Time sensitivity analysis data
 
 key_2010 <- discharge2 %>%
-  filter(grepl("2010", `Admission period`)) %>%
+  filter(grepl("2010", `Discharge period`)) %>%
   select(pt_text)
 key_2019 <- discharge2 %>%
-  filter(grepl("2019", `Admission period`)) %>%
+  filter(grepl("2019", `Discharge period`)) %>%
   select(pt_text)
 
 pt_2010 <- pt_orig %>%
