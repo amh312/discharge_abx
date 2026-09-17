@@ -257,8 +257,8 @@ test_disc_bertdf = pt_2019_tokenised
 train_disc_bertdf,train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
 train_ref = train_disc_bertdf.to_pandas()
 train_ref = train_ref['text']
-train_ref.to_csv("train_ref.csv", index=False)
-train_removed.to_csv("train_removed.csv", index=False)
+train_ref.to_csv("train_ref_timesens.csv", index=False)
+train_removed.to_csv("train_removed_timesens.csv", index=False)
 
 ###ACCESS Data loaders
 train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True)
