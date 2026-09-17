@@ -1,4 +1,4 @@
-This repository houses the code for the academic paper **"Screening hospital discharge letters with scalable natural language processing efficiently detects inappropriate antibiotic use"**, for the purpose of peer review and subsequent open-sourcing.
+This repository houses the code for the academic paper **"Screening hospital discharge letters with scalable natural language processing flags potentially inappropriate discharge antibiotic prescriptions for review"**, for the purpose of peer review and subsequent open-sourcing.
 
 If you use this code please cite this repository.
 
