@@ -529,7 +529,7 @@ end_time <- Sys.time()
 time_taken <- end_time - start_time
 time_taken <- as.numeric(time_taken, units = "secs")
 time_df1 <- data.frame(matrix(ncol = 2, nrow = 1))
-time_df1[1, ] <- c("BOW_performance.R", time_taken)
+time_df1[1, ] <- c("X. BOW_overall_perf.R", time_taken)
 colnames(time_df1) <- c("Script", "Time (secs)")
 time_df <- read_csv("script_times.csv")
 time_df <- rbind(time_df, time_df1)

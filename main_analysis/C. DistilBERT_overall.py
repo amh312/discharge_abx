@@ -321,7 +321,7 @@ tokeniser.save_pretrained(savdirec)
 end_time = datetime.now()
 time_taken = end_time - start_time
 time_taken = time_taken.total_seconds()
-time_df1 = pd.DataFrame({"Script": ["BERT_discharges.py"], "Time (secs)": [time_taken]})
+time_df1 = pd.DataFrame({"Script": ["C. DistilBERT_overall.py"], "Time (secs)": [time_taken]})
 time_df = pd.read_csv("script_times.csv")
 time_df = pd.concat([time_df, time_df1], ignore_index=True)
 time_df.to_csv("script_times.csv", index=False)
