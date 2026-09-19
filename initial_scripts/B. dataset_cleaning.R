@@ -1,4 +1,15 @@
-#DISCHARGE TEXT CLEANING
+#B. dataset_cleaning.R
+
+#This R script cleans the MIMIC-IV discharges.csv dataset and undertakes natural language processing to
+#prepare the textual discharge letter data for input into the DistilBERT, BERT-based and logistic regression models.
+#It also prepares the outcome variable by processing antimicrobial discharge prescription data to detect
+#prescriptions of any antimicrobial (for the overall model) and Access antimicrobials specifically (for the Access model).
+
+#NB This script has manual cleaning elements tailored to the MIMIC-IV dataset, so will not run on the test data
+# (which is synthetic cleaned data that can only be run starting at C. DistilBERT_overall.R).
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -20,11 +31,17 @@ library(glue)
 ###v1.1.7
 library(rlang)
 
+###############################################
+###############################################
+
 ##Initialise script timer
 
 time_df <- data.frame(matrix(ncol = 2, nrow = 1))
 colnames(time_df) <- c("Script", "Time (secs)")
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -136,10 +153,16 @@ discharge_meds <- function(df, new_col) {
     mutate(!!new_col := sub("Discharge Disposition.*$", "", !!new_col))
 }
 
+###############################################
+###############################################
+
 ##Read-in
 
 discharge <- read_csv("discharge.csv")
 aware <- read_csv("aware_classification.csv")
+
+###############################################
+###############################################
 
 ##Discharge letter filtering and text preprocessing
 
@@ -168,6 +191,9 @@ discharge2 <- discharge2 %>%
     pt_text,
     2
   )
+
+###############################################
+###############################################
 
 ##Discharge medications filtering and preprocessing
 
@@ -412,6 +438,9 @@ discharge2 <- discharge2 %>%
 ###Interim save
 write_csv(discharge2, "discharge_interim.csv")
 
+###############################################
+###############################################
+
 ##Removal of undetected duplicates
 discharge2 <- read_csv("discharge_interim.csv")
 discharge2 <- discharge2 %>% distinct(pt_text, .keep_all = T)
@@ -477,6 +506,9 @@ pt_access_only_key <- discharge2 %>%
 write_csv(pt_access_only, "pt_access_only.csv")
 write_csv(pt_access_only_key, "pt_access_only_key.csv")
 
+###############################################
+###############################################
+
 ##Stability analysis data
 
 ###Seed for random sampling
@@ -504,6 +536,9 @@ ac_stab_key <- pt_access_only_key[ac_index, ]
 ac_stab <- ac_stab |> rename(Access = "access_only")
 write_csv(ac_stab, "stab_access.csv")
 write_csv(ac_stab_key, "stab_access_key.csv")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

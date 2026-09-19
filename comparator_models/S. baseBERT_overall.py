@@ -1,4 +1,9 @@
-#BERT (bert-base-uncased) discharge antibiotic prediction
+#S. baseBERT_overall.py
+
+#This is a comparator model at the upper end of what could be run onnthe hardware specified in the README. It is a BERT-base model with 110 million parameters,
+#trained on the same dataset as the DistilBERT and logistic regression model with the same train-test splits. The syntax is effectively the same as script C,
+#with substitution of BERT-base tokeniser/trainer for that of DistilBERT and similarly testing the overall model strategy. Output is a dataframe of paired
+#predictions and labels.
 
 ###############################################
 ###############################################

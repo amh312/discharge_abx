@@ -1,4 +1,11 @@
-#MODEL PERFORMANCE (sliding window overall model)
+#Q. DistilBERT_SW_perf.R
+
+#Performance analysis of the sliding window DistilBERT model trained and validated in P. DistilBERT_SW_overall.py.
+#It follows the same pattern as R scripts that undertook performance analyses of the main models and the stability/
+#time sensitivity analyses, so the outputs are in the same format as those prior analyses.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -27,6 +34,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -404,16 +414,20 @@ questionmaker <- function(df) {
     )
 }
 
+###############################################
+###############################################
+
 ##Read-in
 perf_df <- read_csv("bert_preds_chunked.csv")
 disc_token_no <- read_csv("disc_token_no.csv")
 train_ref <- read_csv("train_ref.csv")
 
+###############################################
+###############################################
+
 ##Truncation check
 
-###Check proportion of documents that would have been truncated under the
-###non-chunked approach (retained here for comparison purposes only - the
-###chunked model does not truncate any of these documents).
+###Check proportion of documents truncated under standard approach
 sum(disc_token_no$truncated)
 sum(disc_token_no$truncated) / nrow(disc_token_no)
 
@@ -424,6 +438,9 @@ disc_token_no |>
   head(30) |>
   select(text, num_tokens) |>
   write_csv("top30_truncated_discharge_texts.csv")
+
+###############################################
+###############################################
 
 ##Performance curves
 
@@ -528,6 +545,9 @@ prc_df <- data.frame(
   precision = prc$curve[, 2]
 )
 write_csv(prc_df, "sourcedata__prc_chunked.csv")
+
+###############################################
+###############################################
 
 ##Bootstrapped performance characteristics
 
@@ -640,6 +660,9 @@ perf_cis <- perf_cis %>%
   tibble()
 
 write_csv(perf_cis, "performance_metrics_chunked.csv")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

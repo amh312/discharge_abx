@@ -1,4 +1,14 @@
-#MODEL PERFORMANCE (ACCESS PREDICTION)
+#F. DistilBERT_Access_perf.R
+
+#This is effectively a duplicate of E. DistilBERT_overall_perf.R, but tests the performance of the Access model
+#using the output from DistilBERT_Access.py. It does not have a kappaSize calculation, and samples a different set of
+#discharge letters for the clinician discharge letter exercise.
+
+#NB as for the overall model, a seed was not set at original sampling so it will not sample the same set of
+#discharge letters used in the manuscript analysis.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -24,6 +34,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -405,6 +418,9 @@ questionmaker_2 <- function(df) {
 perf_df <- read_csv("access_bert_preds.csv")
 perf_ci2 <- read_csv("performance_metrics.csv")
 
+###############################################
+###############################################
+
 ##Performance curves
 
 ###ROC
@@ -519,6 +535,9 @@ prc_df <- data.frame(
 )
 write_csv(prc_df, "sourcedata_access_prc.csv")
 
+###############################################
+###############################################
+
 ##Other performance characteristics
 
 perfmets <- data.frame(matrix(nrow = 1000, ncol = 10))
@@ -632,6 +651,9 @@ perf_cis <- perf_ci2 %>% left_join(perf_cis, by = "Metric")
 
 write_csv(perf_cis, "access_performance_metrics.csv")
 
+###############################################
+###############################################
+
 ##Write discharge summary questions CSV
 
 pos_df <- perf_df %>% filter(label == 0)
@@ -709,6 +731,9 @@ write_csv(
   q_6,
   "ac_q_6.csv"
 )
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 end_time <- Sys.time()

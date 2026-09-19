@@ -1,20 +1,46 @@
-#BERT discharge antibiotic prediction - sliding window sensitivity analysis
+#O. DistilBERT_SW_overall.py
+
+#This script takes the framework of the DistilBERT model from C. DistilBERT_overall.py, but instead of truncating
+#documents to 512 tokens where length exceeds this, it instead splits longer documents into 2 rows in the training and
+#testing datasets. To prevent very small documents, this is done in a 'sliding window' way where two or more
+#documents are produced that overlap by 64 tokens ('stride'). Additional steps are added to ensure that duplication of rows does not lead
+#to documents straddling the train-test split. Like the previous model Python scripts, it produces a model and a dataframe
+#of prediction-outcome pairs used for performance analysis by Q. DistilBERT_SW_perf.R.
+
+###############################################
+###############################################
 
 ##Packages
 
+###transformers v5.4.0
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, set_seed
-import torch
+
+###datasets v4.8.4
 from datasets import Dataset
+
+###pandas v3.0.1
 import pandas as pd
+
+###numpy v1.26.4
 import numpy as np
+
+###torch v2.11.0
+import torch
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
+
 import random
 from datetime import datetime
+
+###############################################
+###############################################
 
 ##Initialise script timer
 
 start_time = datetime.now()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -28,15 +54,31 @@ def count_tokens_untruncated(examples):
 
 ###Chunking tokeniser - splits documents > 512 tokens into overlapping windows
 def chunk_tokener(examples, stride=64, max_length=512):
+
+    #text tokenisation
     tokenised = tokeniser(
+
+        #subset to text column of dataset
         examples["text"],
+
+        #truncate to specified max length (here 512)
         truncation=True,
         max_length=max_length,
+
+        #set stride length (here 64) to control amount of overlap
         stride=stride,
+
+        #return all windows
         return_overflowing_tokens=True,
+
+        #pad to 512 token length
         padding="max_length",
     )
+
+    #pop out the index map to keep track of which document segments come from
     sample_map = tokenised.pop("overflow_to_sample_mapping")
+
+    #return a dictionary with the details of each segment
     return {
         "input_ids": tokenised["input_ids"],
         "attention_mask": tokenised["attention_mask"],
@@ -47,35 +89,67 @@ def chunk_tokener(examples, stride=64, max_length=512):
 
 ###Train-test split
 def ttsplit(token_data,testsize):
+
+    #split index
     split_disc_bertdf = token_data.train_test_split(test_size=testsize)
+
+    #split by index
     traindf = split_disc_bertdf['train']
     testdf = split_disc_bertdf['test']
+
     return traindf, testdf
 
 ###Removal of pts in the test set from the training set
 def remove_testpatients(train_df, test_df,key_df):
+
+    #to dataframes
     train_disc_bertdf2 = train_df.to_pandas()
     test_disc_bertdf2 = test_df.to_pandas()
+
+    #get text column
     train_texts = train_disc_bertdf2['text']
     test_texts = test_disc_bertdf2['text']
+
+    #make key df
     key_df2 = key_df.rename(columns={"pt_text": "text"})
+
+    #get train and test subjects
     train_subjects = pd.merge(train_texts, key_df2, on='text', how='left')
     test_subjects = pd.merge(test_texts, key_df2, on='text', how='left')
+
+    #filter training data to remove test subjects
     train_subjects_filtered = train_subjects[~train_subjects['subject_id'].isin(test_subjects['subject_id'])]
     train_subjects_filtered_texts = train_subjects_filtered['text']
+
+    #keep track of the test subjects removed
     train_subjects_lost = train_subjects[train_subjects['subject_id'].isin(test_subjects['subject_id'])]
     train_subjects_lost_texts = train_subjects_lost['text']
+
+    #convert to df
     train_disc_bertdf2 = train_df.to_pandas()
+
+    #filter training texts to remove test subjects
     train_disc_bertdf_filtered = train_disc_bertdf2[train_disc_bertdf2['text'].isin(train_subjects_filtered_texts)]
+
+    #to torch dataset
     train_disc_bertdf2 = Dataset.from_pandas(train_disc_bertdf_filtered)
+
+    #return filtered training data and removed test subjects
     return train_disc_bertdf2, train_subjects_lost_texts
 
 ###Cleaning
 def dfcleanconv(df):
+
+    #rename columns
     df2 = df.rename(columns={"ab_on_disc": "label"})
     df2 = df2.rename(columns={"pt_text": "text"})
+
+    #drop rows with missing text
     df2 = df2.dropna(subset=['text'])
+
+    #convert to torch dataset
     df2 = Dataset.from_pandas(df2)
+
     return df2
 
 ###Model training
@@ -181,16 +255,25 @@ def bert_predict(mod, loader):
 
     return perfdf
 
-###Aggregate chunk-level predictions to document level using max probability
+###Aggregate chunk-level predictions to discharge letter level using max probability
 def aggregate_max_prob(chunk_perf_df, doc_order, doc_text_lookup):
+
+    #create copy of chunk-level performance dataframe for inside function
     chunk_perf_df = chunk_perf_df.copy()
+
+    #get just the max prob row for each discharge letter
     idx = chunk_perf_df.groupby('doc_id')['prob'].idxmax()
+
+
     agg_df = chunk_perf_df.loc[idx].set_index('doc_id')
     agg_df = agg_df.reindex(doc_order)
     agg_df['text'] = [doc_text_lookup[d] for d in doc_order]
     agg_df = agg_df.reset_index(drop=True)
     agg_df = agg_df[['pred', 'prob', 'label', 'text']]
     return agg_df
+
+###############################################
+###############################################
 
 ##Seeds
 
@@ -207,6 +290,9 @@ torch.backends.cudnn.benchmark = False
 ###Other
 set_seed(123)
 
+###############################################
+###############################################
+
 ##Read in
 
 disc_df = pd.read_csv("pt_orig.csv")
@@ -217,14 +303,13 @@ disc_subjectkey=pd.read_csv("pt_orig_key.csv")
 ###Clean and convert to Pytorch dataset
 disc_bertdf = dfcleanconv(disc_df)
 
-###Assign a stable per-document id before any splitting/chunking so chunks
-###can always be traced back to their parent document.
+###Assign a stable per-discharge letter id before any splitting/chunking to ensure traceability to parent document
 disc_bertdf = disc_bertdf.add_column("doc_id", list(range(len(disc_bertdf))))
 
 ###Tokeniser
 tokeniser = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
-###Count truncations (document level, pre-split, for reporting only)
+###Count truncations (discharge letter level, pre-split, for reporting only)
 discdf_token_no = disc_bertdf.map(count_tokens_untruncated, batched=True)
 discdf_token_no = discdf_token_no.to_pandas()
 discdf_token_no = discdf_token_no[['text', 'num_tokens']]
@@ -233,21 +318,21 @@ discdf_token_no.to_csv("disc_token_no.csv", index=False)
 truncation_count = discdf_token_no['truncated'].sum()
 print(truncation_count)
 
-###Train-test split - performed on whole (unchunked) documents to savoid data leakage
+###Train-test split - performed on whole (unchunked) discharge letters to savoid data leakage
 train_disc_bertdf, test_disc_bertdf = ttsplit(disc_bertdf,0.2)
 
-###Remove test patients from training set (still at document level)
+###Remove test patients from training set (still at discharge letter level)
 train_disc_bertdf,train_removed = remove_testpatients(train_disc_bertdf, test_disc_bertdf, disc_subjectkey)
 train_ref = train_disc_bertdf.to_pandas()
 train_ref = train_ref['text']
 train_ref.to_csv("train_ref.csv", index=False)
 train_removed.to_csv("train_removed.csv", index=False)
 
-###Document-level order/labels of the test set, used later to reassemble
+###Discharge letter-level order/labels of the test set, used later to reassemble
 test_doc_order = test_disc_bertdf['doc_id']
 test_doc_text_lookup = dict(zip(test_disc_bertdf['doc_id'], test_disc_bertdf['text']))
 
-###Chunk documents into overlapping 512-token windows
+###Split documents into sequential windows overlapping by 64 tokens of maximum length 512 tokens
 train_disc_bertdf_chunked = train_disc_bertdf.map(
     chunk_tokener, batched=True, remove_columns=train_disc_bertdf.column_names
 )
@@ -278,6 +363,9 @@ test_disc_bertdf_chunked.set_format(type='torch', columns=['input_ids', 'attenti
 train_loader = DataLoader(train_disc_bertdf_chunked, batch_size=16, shuffle=True,num_workers=6)
 test_loader = DataLoader(test_disc_bertdf_chunked, batch_size=16,num_workers=6)
 
+###############################################
+###############################################
+
 ##DistilBERT prep
 
 ###Set to run on MPS if mac, otherwise run on CPU
@@ -289,6 +377,9 @@ discmodel.to(device)
 
 ###Set learning rate on ADAMW optimiser
 disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
+
+###############################################
+###############################################
 
 ##Model training and predictions
 
@@ -303,11 +394,17 @@ chunk_preds_perf_df['doc_id'] = test_chunk_doc_ids
 preds_perf_df = aggregate_max_prob(chunk_preds_perf_df, test_doc_order, test_doc_text_lookup)
 preds_perf_df.to_csv("bert_preds_chunked.csv", index=False)
 
+###############################################
+###############################################
+
 ##Save model and tokeniser
 
 savdirec = "./pt_disc_dbert_chunked"
 discmodel.save_pretrained(savdirec)
 tokeniser.save_pretrained(savdirec)
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

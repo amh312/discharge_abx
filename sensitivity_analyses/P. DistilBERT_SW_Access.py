@@ -1,20 +1,42 @@
-#BERT discharge antibiotic prediction (Access model) - sliding window analysis
+#P. DistilBERT_SW_Access.py
+
+#This is a duplicate of DistilBERT_SW_overall.py but for the Access model. As for that script, a prediction-outcome
+#dataframe is produced is used by a companion performance assessment script R. DistilBERT_SW_Access_perf.R.
+
+###############################################
+###############################################
 
 ##Packages
 
+###transformers v5.4.0
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, set_seed
-import torch
+
+###datasets v4.8.4
 from datasets import Dataset
+
+###pandas v3.0.1
 import pandas as pd
+
+###numpy v1.26.4
 import numpy as np
+
+###torch v2.11.0
+import torch
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
+
 import random
 from datetime import datetime
+
+###############################################
+###############################################
 
 ##Initialise script timer
 
 start_time = datetime.now()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -192,6 +214,9 @@ def aggregate_max_prob(chunk_perf_df, doc_order, doc_text_lookup):
     agg_df = agg_df[['pred', 'prob', 'label', 'text']]
     return agg_df
 
+###############################################
+###############################################
+
 ##Seeds
 
 ###Random
@@ -207,10 +232,16 @@ torch.backends.cudnn.benchmark = False
 ###Other
 set_seed(123)
 
+###############################################
+###############################################
+
 ##Read in
 
 disc_df = pd.read_csv("pt_access_only.csv")
 disc_subjectkey = pd.read_csv("pt_access_only_key.csv")
+
+###############################################
+###############################################
 
 ##Preprocessing
 
@@ -278,6 +309,9 @@ train_loader = DataLoader(train_disc_bertdf_chunked, batch_size=16, shuffle=True
 test_loader = DataLoader(test_disc_bertdf_chunked, batch_size=16,num_workers=6)
 torch.set_num_threads(10)
 
+###############################################
+###############################################
+
 ##BERT prep
 
 ###Set to run on MPS if mac, otherwise run on CPU
@@ -289,6 +323,9 @@ discmodel.to(device)
 
 ###Set learning rate on ADAMW optimiser
 disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
+
+###############################################
+###############################################
 
 ##Model training and predictions
 
@@ -303,11 +340,14 @@ chunk_preds_perf_df['doc_id'] = test_chunk_doc_ids
 preds_perf_df = aggregate_max_prob(chunk_preds_perf_df, test_doc_order, test_doc_text_lookup)
 preds_perf_df.to_csv("access_bert_preds_chunked.csv", index=False)
 
-##Save model and tokeniser
+###Save model and tokeniser
 
 savdirec = "./pt_access_disc_dbert_chunked"
 discmodel.save_pretrained(savdirec)
 tokeniser.save_pretrained(savdirec)
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

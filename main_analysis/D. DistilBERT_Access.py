@@ -1,4 +1,13 @@
-#BERT discharge antibiotic prediction (Access model)
+#D. DistilBERT_Access.py
+
+#This second python script is effectively a duplicate of C. DistilBERT_overall.py, but for predicting
+#whether a discharge antibiotic prescription is an Access agent based on the discharge letter.
+
+#The only differences in the code therefore pertain to elements of preprocessing, e.g., names of
+#outcome columns. As for the overall model, the output is the model itself and a dataframe with
+#paired probability predictions and outcome labels for performance analysis in the R script
+#F. DistilBERT_Access_perf.R
+
 
 ###############################################
 ###############################################

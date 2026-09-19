@@ -1,4 +1,11 @@
-#BERT discharge stability analysis
+#L. DistilBERT_stability.py
+
+#This Python script is effectively a duplicate of C. DistilBERT_overall.py and D. DistilBERT_Access.py,
+#but condensed into one script (given the small dataset size allowing less computation time). The difference
+#is that for this sensitivity analysis, the size of the training dataset is filtered to a fraction of its original size
+#for each model. As with the aforementioned scripts, the outputs are the models themselves (which, unlike in the
+#main analysis, are not actually used again) and a dataframe of paired predictions and outcome labels that are
+#later analysed by the R script N. DistilBERT_sensitivity.R.
 
 ###############################################
 ###############################################

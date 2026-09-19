@@ -1,4 +1,8 @@
-#Bag-of-words discharge antibiotic prediction (both models)
+#W. BOW_overall&Access.py
+
+#This python script trains and tests a bag-of-words (BOW) model with TF-IDF vectorisation and logistic regression as a comparator to DistilBERT. Given the much
+#faster runtime, both models are trained in the same script using scikit-learn and hyperparameter tuning with random search cv is also performed. As for other
+#model scripts, outputs are dataframes with paired predictions and outcome labels.
 
 ###############################################
 ###############################################

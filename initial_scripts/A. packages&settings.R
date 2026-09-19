@@ -1,4 +1,10 @@
-#PACKAGES AND SETTINGS
+#A. packages&settings.R
+
+#This script loads the packages and sets the error handling options for the R script.
+#It is run at the beginning of each session
+#as a backstop to ensure packages are loaded.
+#Packages are, however, also loaded at the beginning of each R script to illustrate where they are used.
+#Package versions used in the original analysis are listed above each package load command.
 
 options(error = NULL)
 

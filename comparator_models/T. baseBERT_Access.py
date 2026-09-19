@@ -1,4 +1,10 @@
-#BERT (bert-base-uncased) discharge antibiotic prediction (Access model)
+#T. baseBERT_Access.py
+
+#This python script is effectively a duplicate of script S, but using BERT-base for the Access model instead. The output, as always, is a csv of the paired predictions
+#and outcome labels for performance analysis by script V.
+
+###############################################
+###############################################
 
 ##Packages
 
@@ -22,9 +28,15 @@ from torch.optim import AdamW
 import random
 from datetime import datetime
 
+###############################################
+###############################################
+
 ##Initialise script timer
 
 start_time = datetime.now()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -200,6 +212,9 @@ def bert_predict(mod):
 
     return perfdf
 
+###############################################
+###############################################
+
 ##Seeds
 
 ###Random
@@ -215,10 +230,16 @@ torch.backends.cudnn.benchmark = False
 ###Other
 set_seed(123)
 
+###############################################
+###############################################
+
 ##Read in
 
 disc_df = pd.read_csv("pt_access_only.csv")
 disc_subjectkey = pd.read_csv("pt_access_only_key.csv")
+
+###############################################
+###############################################
 
 ##Preprocessing
 
@@ -245,6 +266,9 @@ train_loader = DataLoader(train_disc_bertdf, batch_size=16, shuffle=True,num_wor
 test_loader = DataLoader(test_disc_bertdf, batch_size=16,num_workers=6)
 torch.set_num_threads(10)
 
+###############################################
+###############################################
+
 ##BERT prep
 
 ###Set to run on MPS if mac, otherwise run on CPU
@@ -256,6 +280,9 @@ discmodel.to(device)
 
 ###Set learning rate on ADAMW optimiser
 disc_optimiser = AdamW(discmodel.parameters(), lr=2e-5)
+
+###############################################
+###############################################
 
 ##Model training and predictions
 
@@ -269,11 +296,14 @@ test_disc_bertdf2.reset_format()
 preds_perf_df['text'] = test_disc_bertdf2['text']
 preds_perf_df.to_csv("access_fullbert_preds.csv", index=False)
 
-##Save model and tokeniser
+###Save model and tokeniser
 
 savdirec = "./pt_access_disc_fullbert"
 discmodel.save_pretrained(savdirec)
 tokeniser.save_pretrained(savdirec)
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

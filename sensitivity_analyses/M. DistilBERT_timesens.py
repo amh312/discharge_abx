@@ -1,4 +1,10 @@
-#BERT discharge sime sensitivity analysis
+#M. DistilBERT_timesens.py
+
+#Like in N. DistilBERT_stability.py, this Python script effectively duplicates and condenses the overall and
+#Access models into one script, here the training dataset is from the 2008-10 time period and the test dataset is from
+#the 2017-2019 time period (CSVs produced by Descriptive_analysis.R). The outputs are again models (not used again)
+#and dataframes of paired predictions and outcomes subsequently used by N. DistilBERT_sensitivity.R for performance
+#analysis.
 
 ###############################################
 ###############################################

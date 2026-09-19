@@ -1,4 +1,10 @@
-#MODEL PERFORMANCE (BOW Access model)
+#Y. BOW_Access_perf.R
+
+#This is the Access model counterpart to script X, testing performance of the logistic regression model also outputted from script W. It generates full performance
+#characteristics, the headline AUROC and f1-score from which are reported in the manuscript.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -17,6 +23,9 @@ library(PRROC)
 ###v7.0.1
 library(caret)
 
+###############################################
+###############################################
+
 ##Set seed
 
 set.seed(123)
@@ -24,6 +33,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -335,9 +347,15 @@ questionmaker_2 <- function(df) {
     )
 }
 
+###############################################
+###############################################
+
 ##Read-in
 perf_df <- read_csv("access_bow_preds.csv")
 perf_ci2 <- read_csv("bow_performance_metrics.csv")
+
+###############################################
+###############################################
 
 ##Performance curves
 
@@ -453,6 +471,9 @@ prc_df <- data.frame(
 )
 write_csv(prc_df, "sourcedata_bow_access_prc.csv")
 
+###############################################
+###############################################
+
 ##Other performance characteristics
 
 perfmets <- data.frame(matrix(nrow = 1000, ncol = 10))
@@ -565,6 +586,9 @@ perf_cis <- perf_cis %>%
 perf_cis <- perf_ci2 %>% left_join(perf_cis, by = "Metric")
 
 write_csv(perf_cis, "bow_access_performance_metrics.csv")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 end_time <- Sys.time()

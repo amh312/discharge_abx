@@ -1,4 +1,14 @@
-#Exercise feature and SHAP analysis
+#I. DistilBERT_SHAP.py
+
+#This script calculates SHAP values for the discharge letters used in the clinician discharge letter exercise for
+#the overall model. It also produces HTML SHAP plots for each discharge letter in the exercise, and HTML SHAP plots
+#for the two fictional discharge letters that were used in the manuscript. It produces dataframes that are subsequently
+#used for bar plots in the R script K. DistilBERT_analysis_SHAP.R.
+
+###############################################
+###############################################
+
+##Package imports
 
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, DistilBertConfig, set_seed
 import torch
@@ -10,9 +20,15 @@ import shap
 import random
 from datetime import datetime
 
+###############################################
+###############################################
+
 ##Initialise script timer
 
 start_time = datetime.now()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -140,6 +156,9 @@ def madeup_shap(text_madeup,savfile_name):
     with open(savfile_name, "w") as f:
         f.write(html_str)
 
+###############################################
+###############################################
+
 ##Seeds
 
 ###Random
@@ -155,6 +174,9 @@ torch.backends.cudnn.benchmark = False
 ###Other
 set_seed(123)
 
+###############################################
+###############################################
+
 ##Read in
 
 disc_df = pd.read_csv("pt_orig.csv")
@@ -163,6 +185,9 @@ disc_df = pd.read_csv("pt_orig.csv")
 
 ###Model location
 savdirec = "./pt_disc_dbert"
+
+###############################################
+###############################################
 
 ##Preprocessing
 
@@ -219,6 +244,9 @@ madeup_shap("Dear Mr ___, it was a pleasure looking after you during your hospit
 
 ###Appropriate discharge antibiotic
 madeup_shap("Dear Mr ___, it was a pleasure looking after you during your hospital stay. You were admitted with cough, chest pain, and shortness of breath after your recent knee surgery. You were diagnosed with an irregular heart beat, a heart attack and a chest infection. You underwent a procedure to unblock your heart arteries and were given blood thinners and given an antibiotic to complete at home. We have temporarily held your atorvastatin, which you should restart in 1 week. You should attend your orthopaedic appointment in 2 weeks and your cardiology appointment in 1 month. Please contact your GP if you develop any new symptoms or have any concerns. We wish you a speedy recovery.", "shap_text_plot_madeup2.html")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

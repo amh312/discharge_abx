@@ -1,4 +1,19 @@
-#MODEL PERFORMANCE
+#E. DistilBERT_overall_perf.R
+
+#This R script takes the model predictions made by the DistilBERT model in C. DistilBERT_overall.py and
+#produces a range of performance metrics with associated bootstrapping for confidence intervals
+#and pertinent performance plots (e.g., ROC, calibration, PR curves).
+
+#The script has two otehr key roles: firstly, checking the required sample size to test at least
+#moderate agreement using kappaSize for design of the clinician discharge letter exercise; and
+#secondly, randomly sampling a set of 6 randomised samples of discharge letters from the validation
+#dataset for the clinician exercise.
+
+#NB due to a missing seed when sampling was initially run, the discharge letters randomly sampled will
+#not match those used for the original analysis.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -27,6 +42,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -404,9 +422,15 @@ questionmaker <- function(df) {
     )
 }
 
+###############################################
+###############################################
+
 ##Read-in
 perf_df <- read_csv("bert_preds.csv")
 disc_token_no <- read_csv("disc_token_no.csv")
+
+###############################################
+###############################################
 
 ##Truncation check
 
@@ -421,6 +445,9 @@ disc_token_no |>
   head(30) |>
   select(text, num_tokens) |>
   write_csv("top30_truncated_discharge_texts.csv")
+
+###############################################
+###############################################
 
 ##Performance curves
 
@@ -511,6 +538,9 @@ prc_df <- data.frame(
   precision = prc$curve[, 2]
 )
 write_csv(prc_df, "sourcedata__prc.csv")
+
+###############################################
+###############################################
 
 ##Bootstrapped performance characteristics
 
@@ -624,6 +654,9 @@ perf_cis <- perf_cis %>%
 
 write_csv(perf_cis, "performance_metrics.csv")
 
+###############################################
+###############################################
+
 ##Check minimum sample size for questionnaire (Cohen’s kappa 0.41, lower CI 0.21, prescription rate 1/3)
 kapsize <- kappaSize::CIBinary(
   kappa0 = 0.41,
@@ -647,6 +680,9 @@ colnames(kappasize_df) <- c(
   "Minimum sample size"
 )
 write_csv(kappasize_df, "sourcedata_kappa_sample_size.csv")
+
+###############################################
+###############################################
 
 ##Write discharge summary questions CSV
 
@@ -725,6 +761,9 @@ write_csv(
   q_6,
   "q_6.csv"
 )
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

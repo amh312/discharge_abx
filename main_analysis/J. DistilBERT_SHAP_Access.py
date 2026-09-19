@@ -1,18 +1,42 @@
-#Exercise feature and SHAP analysis (Access)
+#J. DistilBERT_SHAP_Access.py
 
+#The Access model counterpart to I. DistilBERT_SHAP.py but for the Access model.
+#Like that script, it feeds data into the the R script K. DistilBERT_analysis_SHAP.R for bar plots
+
+###############################################
+###############################################
+
+###transformers v5.4.0
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, DistilBertConfig, set_seed
-import torch
+
+###datasets v4.8.4
 from datasets import Dataset
+
+###pandas v3.0.1
 import pandas as pd
+
+###numpy v1.26.4
 import numpy as np
+
+###torch v2.11.0
+import torch
 import torch.nn.functional as F
+
+###shap v0.49.1
 import shap
+
 import random
 from datetime import datetime
+
+###############################################
+###############################################
 
 ##Initialise script timer
 
 start_time = datetime.now()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -155,6 +179,9 @@ torch.backends.cudnn.benchmark = False
 ###Other
 set_seed(123)
 
+###############################################
+###############################################
+
 ##Read in
 
 disc_df = pd.read_csv("pt_access_only.csv")
@@ -163,6 +190,9 @@ disc_df = pd.read_csv("pt_access_only.csv")
 
 ###Model location
 savdirec = "./pt_access_disc_dbert"
+
+###############################################
+###############################################
 
 ##Preprocessing
 
@@ -212,6 +242,9 @@ for j in range(6):
     disc_shapdf1 = shap_extractor(shapvalues)
     disc_shapdf1.to_csv(f'access_shaptokens_df_{j}.csv', index=False)
 
+###############################################
+###############################################
+
 ##Fictional discharge summaries for manuscript text plot figures
 
 ###Appropriate Watch antibiotic
@@ -219,6 +252,9 @@ madeup_shap("Dear Mr ___, it was a pleasure looking after you during your hospit
 
 ###Inappropriate Watch antibiotic
 madeup_shap("Dear Mr ___, it was a pleasure looking after you during your hospital stay. You were admitted with chest pain and leg swelling after your recent knee surgery. You were diagnosed with an irregular heart beat, a heart attack and a skin infection. You underwent a procedure to unblock your heart arteries and were given blood thinners and an antibiotic, which you should continue to take at home to complete the course. We have temporarily discontinued your atorvastatin, which you should restart in 1 week. You should attend your orthopaedic appointment in 2 weeks and your cardiology appointment in 1 month. Please contact your GP if you develop any new symptoms or have any concerns. We wish you a speedy recovery.", "shap_text_plot_madeup2_ac.html")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

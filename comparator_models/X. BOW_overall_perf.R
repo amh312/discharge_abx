@@ -1,4 +1,10 @@
-#MODEL PERFORMANCE (BOW)
+#X. BOW_overall_perf.R
+
+#This is the companion R script for the logistic regression model outputs from script W. It generates the same performance characteristics and plots as the main analysis.
+#Only the headline AUROC and F1-score are reported in the manuscript.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -17,6 +23,9 @@ library(PRROC)
 ###v7.0.1
 library(caret)
 
+###############################################
+###############################################
+
 ##Set seed
 
 set.seed(123)
@@ -24,6 +33,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -335,8 +347,14 @@ questionmaker <- function(df) {
     )
 }
 
+###############################################
+###############################################
+
 ##Read-in
 perf_df <- read_csv("bow_preds.csv")
+
+###############################################
+###############################################
 
 ##Performance curves
 
@@ -427,6 +445,9 @@ prc_df <- data.frame(
   precision = prc$curve[, 2]
 )
 write_csv(prc_df, "sourcedata_bow_prc.csv")
+
+###############################################
+###############################################
 
 ##Bootstrapped performance characteristics
 
@@ -539,6 +560,9 @@ perf_cis <- perf_cis %>%
   tibble()
 
 write_csv(perf_cis, "bow_performance_metrics.csv")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

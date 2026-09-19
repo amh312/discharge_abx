@@ -1,4 +1,14 @@
-#BERT discharge antibiotic prediction
+#C. DistilBERT_overall.py
+
+#This is the first Python script run in the main analysis, and is for the prediction of any
+#discharge antibiotic prescription.
+
+#It loads in the preprocessed discharge letter prescriptionwith outcome labels, splits the
+#data into training and validation datasets, trains a DistilBERT model on the training data,
+#then generates a dataframe with paired probability predictions and outcome labels for
+#performance analysis in the R script E. DistilBERT_overall_perf.R.
+
+#The model is also saved to disk for use in the SHAP analysis performed later.
 
 ###############################################
 ###############################################

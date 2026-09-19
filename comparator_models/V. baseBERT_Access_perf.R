@@ -1,4 +1,7 @@
-#MODEL PERFORMANCE (ACCESS PREDICTION)
+#V. baseBERT_Access_perf.R
+
+#The equivalent of script U, but for the Access model performance with BERT-base. Similar outputs to other performance analyses,
+#but as for script U only the headline AUROC and F1-score are reported in the manuscript.
 
 ##Load packages
 

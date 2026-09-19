@@ -1,4 +1,13 @@
-#Questionnaire results
+#H. DistilBERT_questionnaire.R
+
+#This R script takes the results of the clinician questionnaire exercise and the predictions made by the
+#overall and Access models, then calculates performance metrics for
+#the level of agrement between clinicians and the models in terms of discharge antibiotic appropriateness. The script also
+#runs a simulation exercise where the number of prescriptions flagged by the model varies according to the probability
+#threshold set for flagging an prescription as potentially inappropriate.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -14,6 +23,9 @@ library(caret)
 ###v2.6.5
 library(psych)
 
+###############################################
+###############################################
+
 ##Set seed
 
 set.seed(123)
@@ -21,6 +33,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -194,10 +209,16 @@ qu_perf_vec <- function(df) {
   df_vec
 }
 
+###############################################
+###############################################
+
 ##Read-in
 
 bert_preds <- read_csv("bert_preds.csv")
 ac_bert_preds <- read_csv("access_bert_preds.csv")
+
+###############################################
+###############################################
 
 ##Questionnaire performance metrics
 
@@ -221,6 +242,9 @@ for (i in 1:6) {
   cumul_rx <- cumul_rx %>% rbind(df_r_x) %>% tibble()
   cumul_ac_rx <- cumul_ac_rx %>% rbind(ac_df_r_x) %>% tibble()
 }
+
+###############################################
+###############################################
 
 ##Backstop to ensure predictions match final validation dataset
 bert_preds_probs <- bert_preds |>
@@ -266,6 +290,9 @@ cumul_ac_cm <- confusionMatrix(
 )
 cohen.kappa(as.matrix(cumul_ac_rx[, c("bert_inapp", "answer")]))
 print(cumul_ac_cm)
+
+###############################################
+###############################################
 
 ##Threshold analysis
 
@@ -335,6 +362,9 @@ cumul_supp_both <- cumul_supp |>
   rename(`Probability threshold` = "Threshold")
 
 write_csv(cumul_supp_both, "cumul_supp_both.csv")
+
+###############################################
+###############################################
 
 ##Full performance metric table
 
@@ -435,6 +465,9 @@ full_qu_perf <- full_qu_perf |>
   filter(Metric != "Pos Pred Value")
 
 write_csv(full_qu_perf, "full_qu_perf.csv")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

@@ -1,4 +1,12 @@
-#SHAP values across discharge and access models
+#K. DistilBERT_analysis_SHAP.R
+
+#This R script takes the CSVs of SHAP values produced by I. DistilBERT_SHAP_py and J. DistilBERT_SHAP_Access.py
+#and produced bar charts of the top 40 tokens by SHAP attention values for each set of 25 discharge letters given
+#to clinicians in both analyses. It also converts the time taken to run each script into hours, minutes
+#and seconds for presentation as script_times.csv.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -8,9 +16,15 @@ library(tidyverse)
 ###v1.8.0
 library(glue)
 
+###############################################
+###############################################
+
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -122,6 +136,9 @@ seconds_to_hms <- function(secs) {
   glue::glue("{h}h {m}m {s}s")
 }
 
+###############################################
+###############################################
+
 ##iterate over questionnaire discharge letters
 
 for (i in 0:5) {
@@ -134,6 +151,9 @@ for (i in 0:5) {
   ac_shapbar(ac_shapdf, labeltype = i)
 }
 
+###############################################
+###############################################
+
 ##Record time taken to run the script
 
 end_time <- Sys.time()
@@ -145,6 +165,9 @@ colnames(time_df1) <- c("Script", "Time (secs)")
 time_df <- read_csv("script_times.csv")
 time_df <- rbind(time_df, time_df1)
 write_csv(time_df, "script_times.csv")
+
+###############################################
+###############################################
 
 ##Total timings
 

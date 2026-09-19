@@ -1,4 +1,11 @@
-#DESCRIPTIVE DATA
+#G. Descriptive_analysis.R
+
+#This R script generates the descriptive data in the table in the beginning of the Results section of the manuscript.
+#It also generates the bar plot of discharge antibiotic frequency for the supplement, and engineers datasets
+#for use in the time sensitivity analysis M. DistilBERT_timesens.py.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -14,9 +21,15 @@ library(AMR)
 ###v1.1.7
 library(rlang)
 
+###############################################
+###############################################
+
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -288,6 +301,9 @@ agejoin <- function(df, timekey) {
     select(-c(anchor_year, year_diff, chart_year))
 }
 
+###############################################
+###############################################
+
 ##Read-in
 discharge2 <- read_csv("discharge_interim.csv")
 bert_aware <- read_csv("bert_awarelist.csv")
@@ -388,6 +404,9 @@ ggsave(
 )
 
 write_csv(ab_counts, "sourcedata_ab_counts.csv")
+
+###############################################
+###############################################
 
 ##Population characteristics
 
@@ -545,6 +564,9 @@ chartab <- chartab |>
 
 write_csv(chartab, "characteristics_table.csv")
 
+###############################################
+###############################################
+
 ##Time sensitivity analysis data
 
 key_2010 <- discharge2 %>%
@@ -603,6 +625,9 @@ write_csv(ac_2010_key, "ac_2010_key.csv")
 write_csv(ac_2019_key, "ac_2019_key.csv")
 write_csv(pt_timekey, "pt_timekey.csv")
 write_csv(ac_timekey, "ac_timekey.csv")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 

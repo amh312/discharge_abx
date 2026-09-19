@@ -1,4 +1,10 @@
-#MODEL PERFORMANCE (sliding window Access model)
+#R. DistilBERT_SW_Access_perf.R
+
+#The couterpart of Q. DistilBERT_SW_perf.R for the Access model. The performance analyses outputted here are reported
+#in tandem with those analyses in te supplementary information.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -20,6 +26,9 @@ library(caret)
 ###v1.2
 library(kappaSize)
 
+###############################################
+###############################################
+
 ##Set seed
 
 set.seed(123)
@@ -27,6 +36,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -404,10 +416,16 @@ questionmaker_2 <- function(df) {
     )
 }
 
+###############################################
+###############################################
+
 ##Read-in
 perf_df <- read_csv("access_bert_preds_chunked.csv")
 perf_ci2 <- read_csv("performance_metrics_chunked.csv")
 disc_token_no <- read_csv("disc_token_no.csv")
+
+###############################################
+###############################################
 
 ##Performance curves
 
@@ -523,6 +541,9 @@ prc_df <- data.frame(
 )
 write_csv(prc_df, "sourcedata_access_prc_chunked.csv")
 
+###############################################
+###############################################
+
 ##Other performance characteristics
 
 perfmets <- data.frame(matrix(nrow = 1000, ncol = 10))
@@ -636,141 +657,8 @@ perf_cis <- perf_ci2 %>% left_join(perf_cis, by = "Metric")
 
 write_csv(perf_cis, "access_performance_metrics_chunked.csv")
 
-
-##Previously-truncated document performance check
-###Documents that would have exceeded 512 tokens (and thus been truncated
-###under the non-chunked model) are identified here so their chunked-model
-###performance can be compared against the truncated-model figures produced
-###by lang_access_performance.R.
-truncated_perf_df <- disc_token_no |>
-  filter(truncated) |>
-  semi_join(perf_df, by = "text") |>
-  select(-truncated, -num_tokens) |>
-  left_join(perf_df, by = "text")
-
-###Establish bootstrapping dataframe
-truncated_perfmets <- data.frame(matrix(nrow = 1000, ncol = 10))
-colnames(truncated_perfmets) <- c(
-  "Precision",
-  "Recall",
-  "F1",
-  "Specificity",
-  "NPV",
-  "PPR",
-  "Accuracy",
-  "AUROC",
-  "AUPRC",
-  "Calibration"
-)
-
-###Bootstrapping loop
-for (i in 1:1000) {
-  ###Bootstrapping sample
-  samp_perfs <- truncated_perf_df[
-    sample(
-      nrow(truncated_perf_df),
-      size = nrow(truncated_perf_df),
-      replace = TRUE
-    ),
-  ]
-
-  ###Confusion matrix
-  TP <- nrow(samp_perfs %>% filter(pred == 1 & label == 1))
-  TN <- nrow(samp_perfs %>% filter(pred == 0 & label == 0))
-  FP <- nrow(samp_perfs %>% filter(pred == 1 & label == 0))
-  FN <- nrow(samp_perfs %>% filter(pred == 0 & label == 1))
-
-  ###ROC and PRC values
-  thisroc <- roc(samp_perfs$label, samp_perfs$prob, levels = c(0, 1))
-  thisprc <- pr.curve(
-    scores.class0 = samp_perfs %>%
-      filter(label == 1) %>%
-      select(prob) %>%
-      unlist(),
-    scores.class1 = samp_perfs %>%
-      filter(label == 0) %>%
-      select(prob) %>%
-      unlist(),
-    curve = TRUE
-  )
-
-  ###Performance metrics
-  truncated_perfmets$Precision[i] <- TP / (TP + FP)
-  truncated_perfmets$Recall[i] <- TP / (TP + FN)
-  truncated_perfmets$F1[i] <- 2 *
-    ((truncated_perfmets$Precision[i] * truncated_perfmets$Recall[i]) /
-      (truncated_perfmets$Precision[i] + truncated_perfmets$Recall[i]))
-  truncated_perfmets$Specificity[i] <- TN / (TN + FP)
-  truncated_perfmets$NPV[i] <- TN / (TN + FN)
-  truncated_perfmets$PPR[i] <- ppr <- (TP + FP) / (TP + TN + FP + FN)
-  truncated_perfmets$Accuracy[i] <- (TP + TN) / (TP + TN + FP + FN)
-  truncated_perfmets$AUROC[i] <- as.numeric(auc(thisroc))
-  truncated_perfmets$AUPRC[i] <- thisprc$auc.integral
-  truncated_perfmets$Calibration[i] <- calslope(
-    samp_perfs %>% select(label),
-    samp_perfs %>% select(prob)
-  )
-}
-
-###Confidence intervals from bootstrapping
-truncated_perf_cis <- t(apply(truncated_perfmets, 2, function(x) {
-  quantile(x, probs = c(0.025, 0.975), na.rm = T)
-}))
-colnames(truncated_perf_cis) <- c("lower", "upper")
-truncated_perf_cis <- truncated_perf_cis %>% as.data.frame()
-
-###Overall performance metrics
-TP <- nrow(truncated_perf_df %>% filter(pred == 1 & label == 1))
-TN <- nrow(truncated_perf_df %>% filter(pred == 0 & label == 0))
-FP <- nrow(truncated_perf_df %>% filter(pred == 1 & label == 0))
-FN <- nrow(truncated_perf_df %>% filter(pred == 0 & label == 1))
-precision <- TP / (TP + FP)
-recall <- TP / (TP + FN)
-thisroc <- roc(
-  truncated_perf_df$label,
-  truncated_perf_df$prob,
-  levels = c(0, 1)
-)
-thisprc <- pr.curve(
-  scores.class0 = truncated_perf_df %>%
-    filter(label == 1) %>%
-    select(prob) %>%
-    unlist(),
-  scores.class1 = truncated_perf_df %>%
-    filter(label == 0) %>%
-    select(prob) %>%
-    unlist(),
-  curve = TRUE
-)
-truncated_perf_vec <- c(
-  precision,
-  recall,
-  2 * ((precision * recall) / (precision + recall)),
-  TN / (TN + FP),
-  TN / (TN + FN),
-  (TP + FP) / (TP + TN + FP + FN),
-  (TP + TN) / (TP + TN + FP + FN),
-  as.numeric(auc(thisroc)),
-  thisprc$auc.integral,
-  calslope(
-    truncated_perf_df %>%
-      select(label),
-    truncated_perf_df %>%
-      select(prob)
-  )
-)
-truncated_perf_cis$value <- truncated_perf_vec
-truncated_perf_cis$Metric <- rownames(truncated_perf_cis)
-truncated_perf_cis <- truncated_perf_cis %>%
-  mutate(
-    `Previously-truncated documents Access model (95% CI)` = glue(
-      "{sprintf('%.2f', round(value,2))} ({sprintf('%.2f', round(lower,2))}-{sprintf('%.2f', round(upper,2))})"
-    )
-  ) %>%
-  select(-c(lower, upper, value)) %>%
-  tibble()
-
-write_csv(truncated_perf_cis, "ac_truncated_performance_metrics_chunked.csv")
+###############################################
+###############################################
 
 ##Record time taken to run the script
 end_time <- Sys.time()

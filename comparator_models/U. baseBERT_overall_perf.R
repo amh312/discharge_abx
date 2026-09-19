@@ -1,4 +1,10 @@
-#MODEL PERFORMANCE
+#U. baseBERT_overall_perf.R
+
+#This is the performance analysis for the overall BERT-base model trained and tested in script S. Outputs are analogous to those of the main analysis,
+#but are not reported in full in the manuscript in favour of reporting the headline AUROC and F1 score for the initial comparative analysis with DistilBERT.
+
+###############################################
+###############################################
 
 ##Load packages
 
@@ -17,6 +23,9 @@ library(PRROC)
 ###v7.0.1
 library(caret)
 
+###############################################
+###############################################
+
 ##Set seed
 
 set.seed(123)
@@ -24,6 +33,9 @@ set.seed(123)
 ##Script timer
 
 start_time <- Sys.time()
+
+###############################################
+###############################################
 
 ##Functions
 
@@ -401,10 +413,16 @@ questionmaker <- function(df) {
     )
 }
 
+###############################################
+###############################################
+
 ##Read-in
 perf_df <- read_csv("fullbert_preds.csv")
 disc_token_no <- read_csv("disc_token_no_fullbert.csv")
 train_ref <- read_csv("train_ref_fullbert.csv")
+
+###############################################
+###############################################
 
 ##Truncation check
 
@@ -419,6 +437,9 @@ disc_token_no |>
   head(30) |>
   select(text, num_tokens) |>
   write_csv("top30_truncated_discharge_texts_fullbert.csv")
+
+###############################################
+###############################################
 
 ##Performance curves
 
@@ -523,6 +544,9 @@ prc_df <- data.frame(
   precision = prc$curve[, 2]
 )
 write_csv(prc_df, "sourcedata_fullbert_prc.csv")
+
+###############################################
+###############################################
 
 ##Bootstrapped performance characteristics
 
@@ -636,6 +660,9 @@ perf_cis <- perf_cis %>%
 
 write_csv(perf_cis, "performance_metrics_fullbert.csv")
 
+###############################################
+###############################################
+
 ##Check minimum sample size for questionnaire (Cohen’s kappa 0.41, lower CI 0.21, prescription rate 1/3)
 kapsize <- kappaSize::CIBinary(
   kappa0 = 0.41,
@@ -659,6 +686,9 @@ colnames(kappasize_df) <- c(
   "Minimum sample size"
 )
 write_csv(kappasize_df, "sourcedata_kappa_sample_size.csv")
+
+###############################################
+###############################################
 
 ##Truncation performance check
 truncated_perf_df <- disc_token_no |>
@@ -790,6 +820,9 @@ truncated_perf_cis <- truncated_perf_cis %>%
   tibble()
 
 write_csv(truncated_perf_cis, "truncated_performance_metrics_fullbert.csv")
+
+###############################################
+###############################################
 
 ##Record time taken to run the script
 
